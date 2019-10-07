@@ -1,0 +1,361 @@
+---
+title: "raber_550_introductory_analysis"
+author: "Austin Hammer"
+date: "9/12/2019"
+output:
+  '".pdf"': default
+  pdf: default
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+library("ggplot2")
+library("phangorn")
+library("phyloseq")
+library("ape")
+library("Rcpp")
+library("readxl")
+library("dplyr")
+library("vegan")
+library("metacoder")
+library("DESeq2")
+library("edgeR")
+library("BiodiversityR")
+library("DECIPHER")
+library("plyr")
+library("MASS")
+# Setting ggplot2 theme
+theme_set(theme_bw())
+
+# I want to read in the file and just figure out what it looks like after
+# unpacking it from the RDS file format
+
+seqtab <- readRDS("C:/Users/hammera/Desktop/raber_550/data/reads_290190_seqtab_final.rds")
+
+seqtab.taxa <- readRDS("C:/Users/hammera/Desktop/raber_550/data/reads_290190_taxa_final.rds")
+
+# check that number of ASVs and taxa rows is the same
+ASV_taxa_equal <- ncol(seqtab) == nrow(seqtab.taxa)
+
+print(ASV_taxa_equal)
+
+# read pdf metadata in as a data_frame
+meta_data <- as.data.frame(read_excel("C:/Users/hammera/Desktop/raber_550/data/550_metadata.xlsx"))
+meta_data_revised <- as.data.frame(read_excel("C:/Users/hammera/Desktop/raber_550/data/550_metadata_revised.xlsx"))
+rownames(seqtab) <- meta_data$RaberSID
+
+# set data equal to phyloseq object parameters
+# make sure to change the sample data measure based on the metadata used
+samples = sample_data(meta_data_revised)
+ASV = otu_table(seqtab, taxa_are_rows = FALSE)
+TAX = tax_table(seqtab.taxa)
+
+# I had an issue getting the sample names the same and into phyloseq
+sample_names(samples) <- sample_names(ASV)
+
+# create a phyloseq object rename ASVs
+physeq = phyloseq(ASV, TAX, samples)
+dna <- Biostrings::DNAStringSet(taxa_names(physeq))
+physeq <- merge_phyloseq(physeq, dna)
+taxa_names(physeq) <- paste0("ASV", seq(ntaxa(physeq)))
+physeq
+
+# sample 93 was wonky in terms of # of reads, and diversity, while 59 had some metadata issues
+# I ran alpha diversity measures including both of these samples and without, but there was
+# no statistically significant association between radiation and alpha diversity when they were
+# included vs when they weren't
+physeq = subset_samples(physeq, sample_names(physeq) != "93")
+physeq = subset_samples(physeq, sample_names(physeq) != "59")
+
+# makes a histogram of the reads, and tests for normality using Shapiro-Wilks
+# result yields a p-value of 0.44 and suggests that the the data is from a normal distribution
+hist(sample_sums(physeq))
+shapiro.test(sample_sums(physeq))
+
+# set physeq1 equal to physeq
+physeq1 <- physeq
+
+# Change the alpha diversity measure, assign it to a matrix, use shapiro.test to test for normality of alphadiv
+# only a couple of alpha diversity measures followed a normal distribution
+plot_richness(physeq, x="Treatment", color="Treatment")
+```{r, echo=TRUE}
+plot_richness(physeq, x="Treatment", color="Treatment")
+```
+
+sample_data(physeq1)$Alphadiv <- estimate_richness(physeq1, split=TRUE, measures=c("Shannon"))
+
+alphadiv <- as.matrix(sample_data(physeq1)$Alphadiv)
+
+shapiro.test(alphadiv)
+
+# start visualizing  how alphadiv might vary as a function of radiation status
+# I categorized each Radation exposure, and used the MWU test to look for connections with alpha diversity
+# Simpson, Shannon, ACE, Chao1, InvSimpson, and Fisher were all evaluated
+sample_data(physeq1)$Radiated <- get_variable(physeq1, "Treatment") %in% c("25","50","200")
+sample_data(physeq1)$Alphadiv <- estimate_richness(physeq1, split=TRUE, measures=c("Shannon"))
+radiated <- sample_data(physeq1)$Radiated
+alphadiv <- as.matrix(sample_data(physeq1)$Alphadiv)
+
+# using ANOVA to look at how alphadiv varies as a result of treatment (checked for normality above)
+# after rarefaction, still didn't find a significant association
+# between Alphadiv and Treatment/Radiation
+anova_df <- data.frame(sample_data(physeq1))
+anova_results <- aov(as.matrix(Alphadiv) ~ Treatment, data=anova_df)
+summary(anova_results)
+
+# Looking at alpha diversity (Shannon) as a function of radiation
+# after rarefaction, I still didn't find any significant difference between Radiation exposed and sham radiation
+wilcox.test(alphadiv ~ radiated)
+
+# split up Treatment into the 4 factors
+sample_data(physeq1)$Treatment <- as.factor(sample_data(physeq1)$Treatment)
+
+```{r, echo=TRUE}
+first_box <- boxplot(alphadiv ~ radiated, outline=FALSE, color=sample_data(physeq1)$Treatment)
+show_dots<- stripchart(alphadiv ~ radiated, vertical = TRUE, 
+    method = "jitter", add = TRUE, pch = 20, col =c("darkslategray", "orangered4"))
+```
+    
+
+
+```{r, echo=TRUE}
+boxplot(as.matrix(sample_data(physeq1)$Alphadiv) ~ sample_data(physeq1)$Treatment, outline=FALSE)
+stripchart(as.matrix(sample_data(physeq1)$Alphadiv) ~ sample_data(physeq1)$Treatment, vertical = TRUE, 
+    method = "jitter", add = TRUE, pch = 20, col=c("slateblue3", "tomato3", "darkolivegreen", "coral4"))
+```
+
+# try some linear regression to observe association between alphadiv ~ Treatment, no association, pval=0.1168
+# I tried to see if there was a linear model that fits the data above, FSTTimeImmobile had a pval of 0.04677, but the model plot is unusual looking
+covariates <- c("Sex", "Treatment", "AMDarkAverage", "OFTotDistDay1", "OFCentDur1", "NOObjpref", "FSTTimeImmobile", "FCCuedFrzTone", "Radiated")
+lm_of_alphadiv <- lm(alphadiv ~ sample_data(physeq1)$Sex_Treatment)
+summary(lm_of_alphadiv)
+plot(lm_of_alphadiv)
+
+# ordination by radiation
+# coloring based on the "Radiated" sample data didn't reveal much
+# F vs F+R also doesn't appear to change much visually, but check that
+# with some real numbers/analysis
+physeq1.ord <- ordinate(physeq1, "NMDS", "jaccard")
+physeq1.ord.plot.treatment <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Treatment", title="ByTreatment")
+
+```{r physeq_ord_w_ellipse, echo=TRUE}
+# This displays a plot of the ordination
+plot(physeq1.ord, type="p")
+ordiellipse(physeq1.ord, groups=sample_data(physeq1)$Treatment, scaling="symmetric", conf=0.95, col=c("slateblue3", "tomato3", "darkolivegreen", "coral4"), label=TRUE)
+```
+
+
+```{r, echo=TRUE}
+print(physeq1.ord.plot.treatment)
+```
+
+physeq1.ord.plot <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Sex", title="BySex", shape="Treatment")
+print(physeq1.ord.plot)
+physeq1_ord_with_ellipses <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Sex_Treatment", shape="Sex")
+physeq1_ord_with_ellipses + stat_ellipse(level=0.3)
+physeq1.dca <- rda(otu_table(physeq1))
+treatment.env <- na.omit(sample_data(physeq1))
+physeq1.enfit <- envfit(physeq1.dca, env=na.omit(treatment.env), perm=5000)
+plot(physeq1.dca, type="n")
+plot(physeq1.enfit)
+covariates <- c("Sex", "Treatment", "AMDarkAverage", "OFTotDistDay1", "OFCentDur1", "NOObjpref", "FSTTimeImmobile", "FCCuedFrzTone", "Radiated")
+
+```{r, echo=TRUE}
+print(physeq1.ord.plot)
+```
+
+# using PERMANOVA(adonis) on a distance matrix, perms=5000
+#           Df SumsOfSqs MeanSqs F.Model      R2 Pr(>F)   
+# Radiated   1    0.4453 0.44529  1.4346 0.01488  0.0016 **
+# Treatment  3    1.2333 0.41109  1.3321 0.04120  2e-04 ***
+# Sex        1    0.6266 0.62660  2.0312 0.02093  2e-04 ***
+# Box        1    0.6767 0.67668  2.1973 0.02261  2e-04 ***
+covariates <- c("Sex", "Treatment", "AMDarkAverage", "OFTotDistDay1", "OFCentDur1", "NOObjpref", "FSTTimeImmobile", "FCCuedFrzTone", "Radiated")
+physeq1.dist <- vegdist(otu_table(physeq1), method="jaccard")
+sampledf <- data.frame(sample_data(physeq1))
+# Running the below code with Sex_Treatment yielded an R2 of nearly 10%
+set.seed(1)
+perm.results.treatment <- adonis(physeq1.dist ~ Sex_Treatment, data=sampledf, permutations=5000)
+perm.results.treatment
+
+# plotting betadispersion
+treatments <- factor(sample_data(physeq1)$Sex_Treatment)
+betadispersion <- betadisper(physeq1.dist, treatments, type=c("centroid"))
+plot(betadispersion)
+```{r, echo=TRUE}
+plot(betadispersion)
+```
+
+#pvalue <0.05 for test below, permutest is basically anova in the vegan package
+# 
+set.seed(1)
+testbetad <- permutest(betadispersion, permutations=5000)
+testbetad
+```{r, echo=TRUE}
+boxplot(betadispersion, outline=FALSE)
+```
+
+# trying to get envfit function to work
+# in order to get this to show up, I would need to trim Mouse 59 and get rid of some columns with data
+# check if any of these columns are covariates, maybe visit with Tom about this
+physeq1.mds <- isoMDS(physeq1.dist)
+physeq1.mds <- postMDS(physeq1.mds, physeq1.dist)
+physeq1.fit <- envfit(physeq1.mds, sampledf, na.rm=TRUE)
+plot(physeq1.mds$Treatment, pch="+", asp=1, xlab="Dim1", ylab="Dim2")
+plot(physeq1.fit)
+
+physeq1.envfit <- envfit(physeq1.dist, sampledf, perm=5000)
+
+```{r, echo=TRUE}
+print(physeq1.ord.plot.treatment)
+```
+
+
+# Time to rarefy and take a peek at how things might change
+# miniumum reads observed (trimmed read 93) were 16513, so rarefaction occurs at that point
+row_sums <- rowSums(otu_table(physeq1))
+hist(row_sums)
+set.seed(1)
+physeq_rare <- rarefy_even_depth(physeq)
+
+# 4053 (loss of 37 ASVs from physeq1)
+ntaxa(physeq_rare)
+
+# I went through and looked at how covariates might
+# associate with radiation exposure I did find 200cGy grouped a little
+# tighter in the nmds plotting post-rarefaction, and showed a statistically
+# significant effect based on the PERMANOVA results
+sample_data(physeq_rare)$Treatment <- as.factor(sample_data(physeq_rare)$Treatment)
+physeq_rare.ord <- ordinate(physeq_rare, "NMDS", "jaccard", weighted=TRUE)
+physeq_rare.ord.plot.treatment <- plot_ordination(physeq_rare, physeq_rare.ord, type="samples", color="Treatment", title="ByTreatment")
+
+```{r, echo=TRUE}
+print(physeq_rare.ord.plot.treatment)
+```
+
+
+# Here's some numbers on the plot above with physeq_rare.dist ~ Treatment (R2=.0461, Pr(>F)=2e-04, bray)
+physeq_rare.dist <- vegdist(otu_table(physeq_rare), method="jaccard")
+sampledf <- data.frame(sample_data(physeq_rare))
+set.seed(1)
+perm.results.treatment.rare <- adonis(physeq_rare.dist ~ Treatment, data=sampledf, permutations=5000)
+perm.results.treatment.rare
+
+# under jaccard the results don't change much for Treatment, but it is interesting to note that
+# the R2 suggests Treatment accounts for nearly 2x the variation as Box or bodyweight
+
+
+# Give agglomeration a tick, and see what your results are saying
+# At each rank, K=2, P=12, C=18, O=24, F=39, G=91, S=(obvious)
+physeq1_glom <- tax_glom(physeq1, taxrank="Genus")
+ntaxa(physeq1_glom)
+physeq1_glom
+
+sample_data(physeq1_glom)$Treatment <- as.factor(sample_data(physeq1_glom)$Treatment)
+physeq1_glom.ord <- ordinate(physeq1_glom, "NMDS", "jaccard", weighted=TRUE)
+physeq1_glom.ord.plot.treatment <- plot_ordination(physeq1_glom, physeq1_glom.ord, type="samples", color="Treatment", title="ByTreatment")
+
+```{r, echo=TRUE}
+print(physeq1_glom.ord.plot.treatment)
+```
+
+physeq1glom.dist <- vegdist(otu_table(physeq1_glom), method="jaccard")
+sampledfglom <- data.frame(sample_data(physeq1_glom))
+physeq1_glom
+set.seed(1)
+perm.results.phyglom <- adonis(physeq1glom.dist ~ Treatment*Bodyweight, data=sampledfglom, permutations=5000)
+perm.results.phyglom
+
+# Making a network, maybe for the academic/exploratory sake of doing it
+glom_network <- make_network(physeq1_glom, type="samples")
+glom_network_plot <- plot_network(glom_network, physeq1_glom, color="Treatment")
+
+```{r, echo=TRUE}
+print(glom_network_plot)
+```
+# it was a bit interesting to see the network that relates Treatment 200
+# the default for distance is jaccard, and the default distance cutoff is 0.4
+# play around with this to see what it looks like at a higher cutoff value
+# this plot uses the agglomerated data, it's kind of interesting that there looks like there is still structure, 
+# although this isn't verified by adonis results for treatment
+
+
+# Trying Deseq2
+# I used this as a quick and dirty test at a couple of different agglomeration levels to test for significance
+# Running this with some of the covariates yields
+# ASV987 (Romboutsia - Genus, Peptostreptococcaceae - Family) (https://www.nature.com/articles/s41598-018-32413-2, recent article on its possible use as a biomarker for intestinal cancers) and ASV 1082 (Ruminococcaceae-UCG-009, reduction in this genus was associated with post-operative delirium in mice, https://onlinelibrary.wiley.com/doi/full/10.1111/cns.13103, it appears to be found broadly in a wide variety of organisms, it's also positively associated with low-grade inflammation related to aging in some animals https://www.frontiersin.org/articles/10.3389/fmicb.2019.01803/full)
+# Maybe running this on the F reads would give a slightly more robust representation of how genera are changing? Especially because I've been using Jaccard, agglomerating with more Forward ASVs might be more sensitive to compositional changes
+# Need to go through and plot how counts change between treatments to get a better visual idea of what's happening here
+ 
+covariates <- c("Sex", "Treatment", "AMDarkAverage", "OFTotDistDay1", "OFCentDur1", "NOObjpref", "FSTTimeImmobile", "FCCuedFrzTone", "Radiated")
+treatdds = phyloseq_to_deseq2(physeq1, ~Sex_Treatment)
+treatdds.deseq = DESeq(treatdds)
+res <- results(treatdds.deseq)
+taxa.results <-c(res@listData[["padj"]])
+
+print(taxa.results[taxa.results<0.005 & taxa.results>0])
+signif_taxa <- (otu_table(physeq1_glom))
+TAX[1082]
+
+# Capscale -> Ordistep for comparison of models (consider using physeq_rare.dist as well)
+sampledf <- data.frame(sample_data(physeq1))
+physeq.capsca <- capscale(physeq1.dist ~ Box + Sex + Treatment, sampledf, dist="jaccard")
+set.seed(1)
+ordistep(physeq.capsca, perm.max = 5000)
+
+## IGNORE THE BUSINESS GOING ON HERE, BUILDING A DF FOR ALPHADIV/BETADIV FOR FUTURE ANALYSIS
+abund_table <- otu_table(physeq1)
+N <- specnumber(abund_table)
+df_N <- data.frame(sample=names(N), value=N, measure=rep("Number", length(N)))
+CH=estimateR(abund_table)[2,]
+df_CH <- data.frame(sample=names(CH), value=CH, measure=rep("Chao1", length(CH)))
+H<-diversity(abund_table, "shannon")
+df_H<-data.frame(sample=names(H), value=H,measure=rep("Shannon",length(H)))
+simp_genus<-diversity(abund_table, "simpson")
+df_simp<-data.frame(sample=names(simp_genus),value=simp_genus, measure=rep("Simpson", length(simp_genus)))
+S<-specnumber(abund_table)
+J<-H/log(S)
+df_J<-data.frame(sample=names(J),value=J,measure=rep("Pielou", length(J)))
+df_adiv <- rbind(df_N, df_CH, df_H, df_J)
+
+ggplot(df_adiv)
+
+# CLUSTERING
+# single linkage clustering
+abund_table_norm <- decostand(abund_table, "normalize")
+jacc_dist <- vegdist(abund_table_norm, method="jaccard")
+cluster_single <- hclust(jacc_dist, method='single')
+plot(cluster_single)
+
+# complete linkage agglomerative clustering
+# "farthest neighbor clustering", allows clustering only at a distance that samples are farthest apart from each other
+cluster_complete <- hclust(jacc_dist, method='complete')
+plot(cluster_complete)
+
+# Ward's minimum variance clustering
+# minimizes sum of squares distances between samples
+# basically treats it like an ANOVA problem instead of using distance metrics
+cluster_ward <- hclust(jacc_dist, method='ward.D2')
+plot(cluster_ward)
+
+# look at the results from the above clustering together
+par(mfrow=c(1,3))
+plot(cluster_single)
+plot(cluster_complete)
+plot(cluster_ward)
+
+# Other ordinations
+# Super low eigenvalues for PC1,2,3,etc. with low inertia as well. (0.0002/0.0033) ~6% variation in PC1
+stand_abund_table <- decostand(abund_table, method="total")
+PCA <- rda(stand_abund_table)
+PCA
+sum(apply(stand_abund_table,2,var))
+biplot(PCA, display='sites')
+ordiplot(PCA, display="sites", type="text")
+head(otu_table(physeq))
+
+#cor.test with a method of spearman
+

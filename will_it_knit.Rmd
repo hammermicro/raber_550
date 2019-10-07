@@ -1,0 +1,235 @@
+---
+title: "will it knit"
+author: "Austin Hammer"
+date: "9/24/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+
+
+```{r pressure, echo=FALSE}
+
+
+## R Markdown
+library("ggplot2")
+library("phangorn")
+library("phyloseq")
+library("ape")
+library("Rcpp")
+library("readxl")
+library("dplyr")
+library("vegan")
+library("metacoder")
+
+# Setting ggplot2 theme
+theme_set(theme_bw())
+
+# I want to read in the file and just figure out what it looks like after
+# unpacking it from the RDS file format
+
+seqtab <- readRDS("C:/Users/hammera/Desktop/raber_550/data/reads_290190_seqtab_final.rds")
+
+seqtab.taxa <- readRDS("C:/Users/hammera/Desktop/raber_550/data/reads_290190_taxa_final.rds")
+
+# check that number of ASVs and taxa rows is the same
+ASV_taxa_equal <- ncol(seqtab) == nrow(seqtab.taxa)
+
+print(ASV_taxa_equal)
+
+# read pdf metadata in as a data_frame
+meta_data <- as.data.frame(read_excel("C:/Users/hammera/Desktop/raber_550/data/550_metadata.xlsx"))
+rownames(seqtab) <- meta_data$RaberSID
+
+# set data equal to phyloseq object parameters
+samples = sample_data(meta_data)
+ASV = otu_table(seqtab, taxa_are_rows = FALSE)
+TAX = tax_table(seqtab.taxa)
+
+# I had an issue getting the sample names the same and into phyloseq
+sample_names(samples) <- sample_names(ASV)
+
+# create a phyloseq object
+physeq = phyloseq(ASV, TAX, samples)
+
+# if you want to prune a weird sample this is one way
+# sample 93 was wonky in terms of # of reads, and diversity, while 59 had some metadata issues
+# I ran alpha diversity measures including both of these samples and without, but there was
+# no statistically significant association between radiation and alpha diversity when they were
+# included vs when they weren't
+physeq = subset_samples(physeq, sample_names(physeq) != "93")
+
+# makes a histogram of the reads, and tests for normality using Shapiro-Wilks
+# result yields a p-value of 0.44 and suggests that the the data is from a normal distribution
+hist(sample_sums(physeq))
+shapiro.test(sample_sums(physeq))
+
+# set physeq1 equal to physeq
+physeq1 <- physeq
+
+# Change the alpha diversity measure, assign it to a matrix, use shapiro.test to test for normality of alphadiv
+# only a couple of alpha diversity measures followed a normal distribution
+sample_data(physeq1)$Alphadiv <- estimate_richness(physeq1, split=TRUE, measures=c("Shannon"))
+
+alphadiv <- as.matrix(sample_data(physeq1)$Alphadiv)
+
+shapiro.test(alphadiv)
+
+# start visualizing  how alphadiv might vary as a function of radiation status
+# I categorized each Radation exposure, and used the MWU test to look for connections with alpha diversity
+# Simpson, Shannon, ACE, Chao1, InvSimpson, and Fisher were all evaluated
+sample_data(physeq1)$Radiated <- get_variable(physeq1, "Treatment") %in% c("25","50","200")
+sample_data(physeq1)$Alphadiv <- estimate_richness(physeq1, split=TRUE, measures=c("Shannon"))
+radiated <- sample_data(physeq1)$Radiated
+alphadiv <- as.matrix(sample_data(physeq1)$Alphadiv)
+tab <- otu_table(physeq1)
+
+
+# using ANOVA to look at how alphadiv varies as a result of treatment (checked for normality above)
+# after rarefaction, still didn't find a significant association
+# between Alphadiv and Treatment/Radiation
+anova_df <- data.frame(sample_data(physeq1))
+anova_results <- aov(alphadiv ~ radiated, data=anova_df)
+summary(anova_results)
+
+# Looking at alpha diversity (Shannon) as a function of radiation
+# after rarefaction, I still didn't find any significant difference between Radiation exposed and sham radiation
+wilcox.test(alphadiv ~ radiated)
+
+# split up Treatment into the 4 factors
+sample_data(physeq1)$Treatment <- as.factor(sample_data(physeq1)$Treatment)
+
+boxplot(as.matrix(sample_data(physeq1)$Alphadiv) ~ (sample_data(physeq1)$Radiated), color=sample_data(physeq1)$Radiated)
+stripchart(as.matrix(sample_data(physeq1)$Alphadiv) ~ (sample_data(physeq1)$Radiated), vertical = TRUE, 
+    method = "jitter", add = TRUE, pch = 20, col =c("darkslategray", "orangered4"))
+    
+
+boxplot(as.matrix(sample_data(physeq1)$Alphadiv) ~ sample_data(physeq1)$Treatment)
+stripchart(as.matrix(sample_data(physeq1)$Alphadiv) ~ sample_data(physeq1)$Treatment, vertical = TRUE, 
+    method = "jitter", add = TRUE, pch = 20, col=c("slateblue3", "tomato3", "darkolivegreen", "coral4"))
+
+
+# try some linear regression to observe association between alphadiv ~ Treatment, no association, pval=0.1168
+lm_of_alphadiv <- lm(alphadiv ~ sample_data(physeq1)$Treatment)
+summary(lm_of_alphadiv)
+
+
+# ordination by radiation
+# coloring based on the "Radiated" sample data didn't reveal much
+# F vs F+R also doesn't appear to change much visually, but check that
+# with some real numbers/analysis
+physeq1.ord <- ordinate(physeq1, "NMDS", "jaccard", weighted=TRUE)
+physeq1.ord.plot.treatment <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Treatment", title="ByTreatment")
+
+plot(physeq1.ord, type="p")
+stat_ellipse(aes(),data=data.frame(sample_data(physeq1)$Treatment), type="euclid")
+
+#ordiellipse(physeq1.ord, groups=sample_data(physeq1)$Treatment, scaling="symmetric", label=TRUE)
+
+print(physeq1.ord.plot.treatment)
+
+
+physeq1.ord.plot <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Sex", title="BySex")
+print(physeq1.ord.plot)
+treatment.env <- sample_data(physeq1)$Alphadiv
+physeq1.envfit <- envfit(physeq1.ord, treatment.env, perm=5000)
+plot(physeq1.envfit)
+
+
+print(physeq1.ord.plot)
+
+# using PERMANOVA(adonis) on a distance matrix, perms=5000
+# I looked at the result of running physeq1.dist as a function of each
+# covariate and recorded some the data on Wed 9/18/19 in my lab notebook
+# I also tried to look at multiple variables at once by using the + sign
+# after the independent variable (Treatment + Sex, Treatment + Box, etc)
+physeq1.dist <- vegdist(otu_table(physeq1), method="canberra")
+sampledf <- data.frame(sample_data(physeq1))
+set.seed(1)
+perm.results.treatment <- adonis(physeq1.dist ~ Treatment, data=sampledf, permutations=5000)
+perm.results.treatment
+perm.results.sex <- adonis(physeq1.dist ~ Sex, data=sampledf, permutations=5000)
+perm.results.sex
+
+# plotting betadispersion
+treatments <- factor(sample_data(physeq1)$Treatment)
+betadispersion <- betadisper(physeq1.dist, treatments, type=c("centroid"))
+
+
+plot(betadispersion)
+
+#pvalue <0.05 for test below
+set.seed(1)
+anova(betadispersion)
+
+
+boxplot(betadispersion)
+
+physeq1.envfit <- envfit(physeq1.dist, sampledf, perm=5000)
+
+print(physeq1.ord.plot.treatment)
+
+
+# Time to rarefy and take a peek at how things might change
+# miniumum reads observed (trimmed read 93) were 16513, so rarefaction occurs at that point
+row_sums <- rowSums(otu_table(physeq1))
+hist(row_sums)
+set.seed(1)
+physeq_rare <- rarefy_even_depth(physeq)
+
+# 4053 (loss of 37 ASVs from physeq1)
+ntaxa(physeq_rare)
+
+# I went through and looked at how alphdiversity and other covariates might
+# associate with radiation exposure I did find 200cGy grouped a little
+# tighter in the nmds plotting post-rarefaction, and showed a statistically
+# significant effect based on the PERMANOVA results
+sample_data(physeq_rare)$Treatment <- as.factor(sample_data(physeq_rare)$Treatment)
+physeq_rare.ord <- ordinate(physeq_rare, "NMDS", "bray", weighted=TRUE)
+physeq_rare.ord.plot.treatment <- plot_ordination(physeq_rare, physeq_rare.ord, type="samples", color="Treatment", title="ByTreatment")
+
+print(physeq_rare.ord.plot.treatment)
+
+
+
+# Here's some numbers on the plot above (R2=.0461, Pr(>F)=2e-04)
+physeq_rare.dist <- vegdist(otu_table(physeq_rare), method="bray")
+sampledf <- data.frame(sample_data(physeq_rare))
+set.seed(1)
+perm.results.treatment.rare <- adonis(physeq_rare.dist ~ Treatment, data=sampledf, permutations=5000)
+perm.results.treatment.rare
+
+# Give agglomeration a tick, and see what your results are saying
+# At each rank, K=2, P=12, C=18, O=24, F=39, G=91, S=(obvious)
+physeq1_glom <- tax_glom(physeq1, taxrank="Order")
+ntaxa(physeq1_glom)
+physeq1_glom
+
+sample_data(physeq1_glom)$Treatment <- as.factor(sample_data(physeq1_glom)$Treatment)
+physeq1_glom.ord <- ordinate(physeq1_glom, "NMDS", "bray", weighted=TRUE)
+physeq1_glom.ord.plot.treatment <- plot_ordination(physeq1_glom, physeq1_glom.ord, type="samples", color="Treatment", title="ByTreatment")
+
+print(physeq1_glom.ord.plot.treatment)
+
+
+physeq1glom.dist <- vegdist(otu_table(physeq1_glom), method="bray")
+sampledfglom <- data.frame(sample_data(physeq1_glom))
+physeq1_glom
+set.seed(1)
+perm.results.phyglom <- adonis(physeq1glom.dist ~ Sex, data=sampledfglom, permutations=5000)
+perm.results.phyglom
+
+
+
+```
+
+
