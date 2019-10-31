@@ -3,11 +3,11 @@ title: "raber_550_introductory_analysis"
 author: "Austin Hammer"
 date: "9/12/2019"
 output:
-  '".pdf"': default
   pdf: default
+  '".pdf"': default
 ---
 
-```{r setup, include=TRUE}
+```{r setup, include=TRUE, message=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -25,8 +25,10 @@ library("DESeq2")
 library("edgeR")
 library("BiodiversityR")
 library("DECIPHER")
-library("plyr")
 library("MASS")
+library(tibble)
+library(knitr)
+
 # Setting ggplot2 theme
 theme_set(theme_bw())
 
@@ -34,17 +36,17 @@ theme_set(theme_bw())
 # unpacking it from the RDS file format
 
 seqtab <- readRDS("C:/Users/hammera/Desktop/raber_550/data/reads_290190_seqtab_final.rds")
-
 seqtab.taxa <- readRDS("C:/Users/hammera/Desktop/raber_550/data/reads_290190_taxa_final.rds")
-
+seqtab <- (seqtab)
 # check that number of ASVs and taxa rows is the same
 ASV_taxa_equal <- ncol(seqtab) == nrow(seqtab.taxa)
 
 print(ASV_taxa_equal)
 
-# read pdf metadata in as a data_frame
+# read excel metadata in as a data_frame
 meta_data <- as.data.frame(read_excel("C:/Users/hammera/Desktop/raber_550/data/550_metadata.xlsx"))
 meta_data_revised <- as.data.frame(read_excel("C:/Users/hammera/Desktop/raber_550/data/550_metadata_revised.xlsx"))
+meta_data_envfit <- as.data.frame(read_excel("C:/Users/hammera/Desktop/raber_550/data/550_metadata_nosex.xlsx"))
 rownames(seqtab) <- meta_data$RaberSID
 
 # set data equal to phyloseq object parameters
@@ -61,7 +63,6 @@ physeq = phyloseq(ASV, TAX, samples)
 dna <- Biostrings::DNAStringSet(taxa_names(physeq))
 physeq <- merge_phyloseq(physeq, dna)
 taxa_names(physeq) <- paste0("ASV", seq(ntaxa(physeq)))
-physeq
 
 # sample 93 was wonky in terms of # of reads, and diversity, while 59 had some metadata issues
 # I ran alpha diversity measures including both of these samples and without, but there was
@@ -94,6 +95,7 @@ shapiro.test(alphadiv)
 # start visualizing  how alphadiv might vary as a function of radiation status
 # I categorized each Radation exposure, and used the MWU test to look for connections with alpha diversity
 # Simpson, Shannon, ACE, Chao1, InvSimpson, and Fisher were all evaluated
+# Perhaps perform alphadiversity analyses on the rarefied data to see if the results recapitulate those from Keaton and the MPTP data
 sample_data(physeq1)$Radiated <- get_variable(physeq1, "Treatment") %in% c("25","50","200")
 sample_data(physeq1)$Alphadiv <- estimate_richness(physeq1, split=TRUE, measures=c("Shannon"))
 radiated <- sample_data(physeq1)$Radiated
@@ -156,15 +158,18 @@ physeq1.ord.plot <- plot_ordination(physeq1, physeq1.ord, type="samples", color=
 print(physeq1.ord.plot)
 physeq1_ord_with_ellipses <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Sex_Treatment", shape="Sex")
 physeq1_ord_with_ellipses + stat_ellipse(level=0.3)
-physeq1.dca <- rda(otu_table(physeq1))
-treatment.env <- na.omit(sample_data(physeq1))
-physeq1.enfit <- envfit(physeq1.dca, env=na.omit(treatment.env), perm=5000)
-plot(physeq1.dca, type="n")
+physeq1.rda <- rda(otu_table(physeq1))
+treatment.env <- data.frame(sample_data(physeq))
+physeq1.enfit <- envfit(physeq1.rda~Sex+Treatment+FSTTimeImmobile+NOObjpref+OFCentDur1+FCCuedFrzTone+OFTotDistDay1, data=(treatment.env), perm=5000)
+plot(physeq1.rda, type="p")
 plot(physeq1.enfit)
-covariates <- c("Sex", "Treatment", "AMDarkAverage", "OFTotDistDay1", "OFCentDur1", "NOObjpref", "FSTTimeImmobile", "FCCuedFrzTone", "Radiated")
+
+physeq1.cca <- (cca(otu_table(physeq1)~Treatment+FSTTimeImmobile+NOObjpref+OFCentDur1+FCCuedFrzTone+OFTotDistDay1, data=treatment.env))
+plot(physeq1.cca)
+
 
 ```{r, echo=TRUE}
-print(physeq1.ord.plot)
+print(physeq1.ord.plot) + stat_ellipse(level=0.6)
 ```
 
 # using PERMANOVA(adonis) on a distance matrix, perms=5000
@@ -174,17 +179,36 @@ print(physeq1.ord.plot)
 # Sex        1    0.6266 0.62660  2.0312 0.02093  2e-04 ***
 # Box        1    0.6767 0.67668  2.1973 0.02261  2e-04 ***
 covariates <- c("Sex", "Treatment", "AMDarkAverage", "OFTotDistDay1", "OFCentDur1", "NOObjpref", "FSTTimeImmobile", "FCCuedFrzTone", "Radiated")
-physeq1.dist <- vegdist(otu_table(physeq1), method="jaccard")
+physeq1.dist <- vegdist(otu_table(physeq1), method="bray")
 sampledf <- data.frame(sample_data(physeq1))
-# Running the below code with Sex_Treatment yielded an R2 of nearly 10%
+# Running the below code with Sex_Treatment yielded an R2 of nearly 10%, but this is a post-hoc observation that isn't necessarily meaningful
+# Look at how this runs on rarefied data instead of the crap you're feeding it now
 set.seed(1)
-perm.results.treatment <- adonis(physeq1.dist ~ Sex_Treatment, data=sampledf, permutations=5000)
+perm.results.treatment <- adonis(physeq1.dist ~ OFTotDistDay1, data=sampledf, permutations=5000)
 perm.results.treatment
 
 # plotting betadispersion
 treatments <- factor(sample_data(physeq1)$Sex_Treatment)
 betadispersion <- betadisper(physeq1.dist, treatments, type=c("centroid"))
 plot(betadispersion)
+beta_disp_tukey_result <- TukeyHSD(betadispersion, ordered=FALSE, conf.level=0.95)
+print(beta_disp_tukey_result)
+beta_disp_0 <- c(betadispersion$distances[betadispersion$group == "0"])
+beta_disp_25 <- c(betadispersion$distances[betadispersion$group == "25"])
+beta_disp_50 <- c(betadispersion$distances[betadispersion$group == "50"])
+beta_disp_200 <- c(betadispersion$distances[betadispersion$group == "200"])
+# pvalue for shapiro-wilks is extremely low, so there is good evidence to reject the null hypothesis that the sampled values are from a normal distribution
+# Does this invalidat the Tukey result earlier? I think that requires a normal distribution
+shapiro.test(as.numeric(betadispersion$distances))
+
+## I can't get the data into a df for post-hoc analysis because the columns are different lengths as a result of trimming samples earlier, so see Tukey below and talk with Tom
+#beta_disper_data_frame <- data.frame(group=c("group_0","group_25"), distance= c(beta_disp_0, beta_disp_25))
+#wilcoxon_results <- wilcox.test(distances ~ group, data=beta_distper_data_frame)
+
+# The code above gave a result that suggests only the 200-50 group is significantly different, running this on Sex_Treatment yields a significant adjusted p-val for only F50 and M200/F200
+# As there is not a significant difference between groups other than F50 and M200/F200, significant differences in beta-diversity are (mostly?) not attributable to differences in dispersion
+
+
 ```{r, echo=TRUE}
 plot(betadispersion)
 ```
@@ -193,21 +217,15 @@ plot(betadispersion)
 # 
 set.seed(1)
 testbetad <- permutest(betadispersion, permutations=5000)
-testbetad
+anova(betadispersion)
+indiv_group <- betadispersion$distances
+print(indiv_group)
+print(betadispersion$distances[group["0"]])
+
 ```{r, echo=TRUE}
 boxplot(betadispersion, outline=FALSE)
 ```
 
-# trying to get envfit function to work
-# in order to get this to show up, I would need to trim Mouse 59 and get rid of some columns with data
-# check if any of these columns are covariates, maybe visit with Tom about this
-physeq1.mds <- isoMDS(physeq1.dist)
-physeq1.mds <- postMDS(physeq1.mds, physeq1.dist)
-physeq1.fit <- envfit(physeq1.mds, sampledf, na.rm=TRUE)
-plot(physeq1.mds$Treatment, pch="+", asp=1, xlab="Dim1", ylab="Dim2")
-plot(physeq1.fit)
-
-physeq1.envfit <- envfit(physeq1.dist, sampledf, perm=5000)
 
 ```{r, echo=TRUE}
 print(physeq1.ord.plot.treatment)
@@ -230,18 +248,23 @@ ntaxa(physeq_rare)
 # significant effect based on the PERMANOVA results
 sample_data(physeq_rare)$Treatment <- as.factor(sample_data(physeq_rare)$Treatment)
 physeq_rare.ord <- ordinate(physeq_rare, "NMDS", "jaccard", weighted=TRUE)
-physeq_rare.ord.plot.treatment <- plot_ordination(physeq_rare, physeq_rare.ord, type="samples", color="Treatment", title="ByTreatment")
+physeq_rare.ord.plot.treatment <- plot_ordination(physeq_rare, physeq_rare.ord, type="samples", color="Sex_Treatment", title="ByTreatment")
 
+print(physeq_rare.ord.plot.treatment) + stat_ellipse(level=0.4)
 ```{r, echo=TRUE}
-print(physeq_rare.ord.plot.treatment)
+print(physeq_rare.ord.plot.treatment) + stat_ellipse(level=0.4)
 ```
 
 
 # Here's some numbers on the plot above with physeq_rare.dist ~ Treatment (R2=.0461, Pr(>F)=2e-04, bray)
-physeq_rare.dist <- vegdist(otu_table(physeq_rare), method="jaccard")
+# p-values for the following covariates using rarefied data are "Sex"=2e-04, "Treatment"=0.0005999, "AMDarkAverage"=(too many zeros, so it was trimmed), "OFTotDistDay1"=0.7485, "OFCentDur1"=0.3543, "NOObjpref"=0.3583, "FSTTimeImmobile"=0.3603, "FCCuedFrzTone"=0.1012, "Radiated")
+# Box=2e-04
+# For all of these Treatment has easily the largest R2 value, but it is ~0.04
+# The most significant drivers of community structure according to the analyses in Adonis are Treatment, Sex, and Box. Running adonis with different permutations of these three covariates shows that Treatment remains the covariate with the largest R2 value
+physeq_rare_dist <- vegdist(otu_table(physeq_rare), method="jaccard")
 sampledf <- data.frame(sample_data(physeq_rare))
 set.seed(1)
-perm.results.treatment.rare <- adonis(physeq_rare.dist ~ Treatment, data=sampledf, permutations=5000)
+perm.results.treatment.rare <- adonis(physeq_rare_dist ~ Box*Sex + Treatment, data=sampledf, permutations=5000)
 perm.results.treatment.rare
 
 # under jaccard the results don't change much for Treatment, but it is interesting to note that
@@ -259,7 +282,7 @@ physeq1_glom.ord <- ordinate(physeq1_glom, "NMDS", "jaccard", weighted=TRUE)
 physeq1_glom.ord.plot.treatment <- plot_ordination(physeq1_glom, physeq1_glom.ord, type="samples", color="Treatment", title="ByTreatment")
 
 ```{r, echo=TRUE}
-print(physeq1_glom.ord.plot.treatment)
+physeq1_glom.ord.plot.treatment + stat_ellipse(alpha=0.6)
 ```
 
 physeq1glom.dist <- vegdist(otu_table(physeq1_glom), method="jaccard")
@@ -281,7 +304,7 @@ print(glom_network_plot)
 # play around with this to see what it looks like at a higher cutoff value
 # this plot uses the agglomerated data, it's kind of interesting that there looks like there is still structure, 
 # although this isn't verified by adonis results for treatment
-
+# Really intersting that using the F reads was able to link many of the disparate samples together, particuarly those that come from the highly divergent 50cgy group
 
 # Trying Deseq2
 # I used this as a quick and dirty test at a couple of different agglomeration levels to test for significance
@@ -289,39 +312,52 @@ print(glom_network_plot)
 # ASV987 (Romboutsia - Genus, Peptostreptococcaceae - Family) (https://www.nature.com/articles/s41598-018-32413-2, recent article on its possible use as a biomarker for intestinal cancers) and ASV 1082 (Ruminococcaceae-UCG-009, reduction in this genus was associated with post-operative delirium in mice, https://onlinelibrary.wiley.com/doi/full/10.1111/cns.13103, it appears to be found broadly in a wide variety of organisms, it's also positively associated with low-grade inflammation related to aging in some animals https://www.frontiersin.org/articles/10.3389/fmicb.2019.01803/full)
 # Maybe running this on the F reads would give a slightly more robust representation of how genera are changing? Especially because I've been using Jaccard, agglomerating with more Forward ASVs might be more sensitive to compositional changes
 # Need to go through and plot how counts change between treatments to get a better visual idea of what's happening here
- 
-covariates <- c("Sex", "Treatment", "AMDarkAverage", "OFTotDistDay1", "OFCentDur1", "NOObjpref", "FSTTimeImmobile", "FCCuedFrzTone", "Radiated")
-treatdds = phyloseq_to_deseq2(physeq1, ~Sex_Treatment)
+
+# Some covariates to consider are "Sex", "Treatment", "AMDarkAverage", "OFTotDistDay1", "OFCentDur1", "NOObjpref", "FSTTimeImmobile", "FCCuedFrzTone", "Radiated"
+sigtab <- NULL
+treatdds = phyloseq_to_deseq2(physeq_rare, ~Bodyweight)
 treatdds.deseq = DESeq(treatdds)
-res <- results(treatdds.deseq)
-taxa.results <-c(res@listData[["padj"]])
+res = res[order(res$padj, na.last=NA), ]
+alpha = 0.01
+sigtab = res[(res$padj < alpha), ]
+sigtab = cbind(as(sigtab, "data.frame"), as(tax_table(physeq1)[rownames(sigtab), ], "matrix"))
+print(sigtab)
+sigtabgen = subset(sigtab, !is.na(Genus))
+# Phylum order
+x = tapply(sigtabgen$log2FoldChange, sigtabgen$Phylum, function(x) max(x))
+x = sort(x, TRUE)
+sigtabgen$Phylum = factor(as.character(sigtabgen$Phylum), levels=names(x))
+# Genus order
+x = tapply(sigtabgen$log2FoldChange, sigtabgen$Genus, function(x) max(x))
+x = sort(x, TRUE)
+sigtabgen$Genus = factor(as.character(sigtabgen$Genus), levels=names(x))
+ggplot(sigtabgen, aes(y=Genus, x=log2FoldChange, color=Phylum)) + 
+  geom_vline(xintercept = 0.0, color = "gray", size = 0.5) +
+  geom_point(size=6) + 
+  theme(axis.text.x = element_text(angle = -90, hjust = 0, vjust=0.5))
 
-print(taxa.results[taxa.results<0.005 & taxa.results>0])
+# Are the significant ASVs that I find from the F reads the same as the merged?
+print(taxa.results[taxa.results<0.005 & is.numeric(taxa.results)])
 signif_taxa <- (otu_table(physeq1_glom))
-TAX[1082]
 
-# Capscale -> Ordistep for comparison of models (consider using physeq_rare.dist as well)
-sampledf <- data.frame(sample_data(physeq1))
-physeq.capsca <- capscale(physeq1.dist ~ Box + Sex + Treatment, sampledf, dist="jaccard")
-set.seed(1)
-ordistep(physeq.capsca, perm.max = 5000)
 
-## IGNORE THE BUSINESS GOING ON HERE, BUILDING A DF FOR ALPHADIV/BETADIV FOR FUTURE ANALYSIS
-abund_table <- otu_table(physeq1)
-N <- specnumber(abund_table)
-df_N <- data.frame(sample=names(N), value=N, measure=rep("Number", length(N)))
-CH=estimateR(abund_table)[2,]
-df_CH <- data.frame(sample=names(CH), value=CH, measure=rep("Chao1", length(CH)))
-H<-diversity(abund_table, "shannon")
-df_H<-data.frame(sample=names(H), value=H,measure=rep("Shannon",length(H)))
-simp_genus<-diversity(abund_table, "simpson")
-df_simp<-data.frame(sample=names(simp_genus),value=simp_genus, measure=rep("Simpson", length(simp_genus)))
-S<-specnumber(abund_table)
-J<-H/log(S)
-df_J<-data.frame(sample=names(J),value=J,measure=rep("Pielou", length(J)))
-df_adiv <- rbind(df_N, df_CH, df_H, df_J)
 
-ggplot(df_adiv)
+# Capscale -> Ordistep for comparison of models (consider using physeq_rare_dist as well)
+# log of AIC results for different permutations of covariates 
+#Box+Sex+Treatment+FSTTimeImmobile
+#                   Df    AIC      F Pr(>F)
+#  FSTTimeImmobile  1 334.83 1.0317   0.34
+# Box+Sex+Treatment
+# Start: physeq_rare_dist ~ Box + Sex + Treatment 
+
+#            Df    AIC      F Pr(>F)   
+#- Treatment  1 331.92 1.1568  0.060 . 
+#- Sex        1 332.11 1.3398  0.010 **
+#- Box        1 332.14 1.3667  0.005 **
+
+
+##("Sex", "Treatment", "AMDarkAverage", "OFTotDistDay1", "OFCentDur1", "NOObjpref", "FSTTimeImmobile", "FCCuedFrzTone", "Radiated")
+
 
 # CLUSTERING
 # single linkage clustering
@@ -357,5 +393,116 @@ biplot(PCA, display='sites')
 ordiplot(PCA, display="sites", type="text")
 head(otu_table(physeq))
 
-#cor.test with a method of spearman
-
+
+
+
+
+
+
+## I ran through all of the covariates listed 
+sampledf <- data.frame(sample_data(physeq1))
+physeq.capsca <- capscale(physeq_rare_dist ~ Treatment*Sex, sampledf, dist="jaccard")
+set.seed(1)
+mod <- ordistep(physeq.capsca, perm.max = 5000, trace = T, direction = "both")
+
+
+# see this webpage and try a derivative of the following function
+# https://stats.stackexchange.com/questions/323968/theta-going-towards-infinity-in-negative-binomial-model
+foo <- function() {
+  m0 <- glm.nb(y~group)
+  if (m0$th.warn == "iteration limit reached") {
+    m0 <- glm(y~group, family=poisson)
+  }
+  m0
+}
+physeq1_glom <- tax_glom(physeq1, taxrank="Order")
+# Write up some code for taxon analysis
+# First step is to normalize the reads, should I set a threshold in a future step to eliminate low-abundance taxa? This is something that is done in the phyloseq tutorial, and generally a pre-processing step that is used, it would probably change beta-div measures significantly
+plot_taxa_physeq1 <- taxa_sums(physeq1)
+plot(plot_taxa_physeq1)
+physeq1_section <- otu_table(physeq1)
+# Make sure this setting is correct
+physeq1 <- physeq_rare
+ncol(otu_table(physeq1))
+
+# Because there are a bunch of  taxa that show up infrequently, I'm going to prune taxa and proceed for the glm_nb stuff
+plot_taxa_physeq1 <- taxa_sums(physeq1)
+plot(plot_taxa_physeq1)
+# Make sure that at each run, you specify how this is change and track the minimum number of reads per sample that you use
+physeq2 <- physeq_rare
+#physeq2 <- prune_taxa(taxa_sums(physeq2)>1000, physeq2)
+plot(taxa_sums(physeq2))
+# in the code below, x is a phyloseq_object, y and z are covatiates to analyze in GLM1/2
+#glm_nb_for_taxa <- function (x, y, z){
+require("MASS")
+require("phyloseq")
+#colnames(results) <- c("ASV_name", "glm1", "glm2")
+#physeq2 <- transform_sample_counts(physeq2, function(y) y / sum(y))
+ASVs_to_analyze <- otu_table(physeq2)
+ASV_names <- colnames(otu_table(physeq2))
+sample_metadata <- sample_data(physeq2)
+taxa_info <- tax_table(physeq2)
+super_df <- cbind(ASVs_to_analyze, sample_metadata)
+otus <- names(super_df[1:length(ASV_names)])
+## The code below will only execute for 126 ASVs, at which point it says that "no valid set of coefficients has been found" and asks me to supply starting values. It also notes that there were like 50 warnings.
+results = NULL
+glm1_vec <- NULL
+glm2_vec <- NULL
+for (i in 1:ncol(ASVs_to_analyze)) {
+#results$ASV_name <- ASV_names[i]
+# are the glm results not calculating because the standard error is -infinity? Seems this is a common error online
+# basically the analysis tops out at ASV127, not sure what is going on beyond that
+#original form glm2 <- glm.nb(super_df[,i]~Treatment*Sex, data=super_df, link=sqrt)
+glm1 <- glm.nb((super_df[,i])~Treatment+Sex, data=super_df, link=sqrt)
+glm2 <- glm.nb(super_df[,i]~Treatment*Sex, data=super_df, link=sqrt)
+glm1_vec = c(glm1)
+glm2_vec = c(glm2)
+# uses AIC to compare glms for the models listed above
+comparison_results <- NULL
+comparison_results <- AIC(glm1, glm2)
+results <- rbind(results, c(comparison_results$AIC, otus[i]))
+}
+#return(results)
+#}
+
+
+
+
+physeq1_glom <- tax_glom(physeq, taxrank="Genus")
+testing_correlate_function = correlate_taxa(physeq1_glom)
+## The function below takes a phyloseq object, extracts relevant data, then performs a correlation test using Kendall's tau if you want to use a different method for correlation analysis configure it using method in does_it_correlate
+correlate_taxa <- function(phyloseq_object){
+require("phyloseq")
+#normalize read counts
+#phyloseq_object = transform_sample_counts(phyloseq_object, function(y) y / sum(y))
+#extract otu table for creation of big df
+ASVs_for_analysis <- otu_table(phyloseq_object)
+#extract metadata
+sample_metadata <- sample_data(phyloseq_object)
+#Get a taxa table (if you need it for later analysis)
+taxa_info_table <- tax_table(phyloseq_object)
+#combine otu_table and treatment info into one df
+super_cor_df <- cbind(ASVs_for_analysis, sample_metadata)
+#save values in this one
+#colnames(place_to_store_df) <- (c("ASV", "saved p-value"))
+#loop through the super_df, test each taxa for correlation, save the p-value and ASV in place_to_store_df, and return it after analysis is finished
+for (i in 1:ncol(otu_table(phyloseq_object))){
+does_it_correlate <- cor.test(c(super_cor_df[,i]), c(super_cor_df$Treatment), method=(c("kendall")))
+place_to_store_df <- rbind(place_to_store_df, c((colnames(otu_table(phyloseq_object)[,i])), does_it_correlate[["p.value"]]))
+subsetting_vec = !is.na(place_to_store_df[,2])
+place_to_store_df = subset(place_to_store_df, subsetting_vec)
+}
+colnames(place_to_store_df) <- (c("ASV", "saved p-value"))
+return(place_to_store_df)
+}
+
+hist(as.numeric(place_to_store_df[,2]))
+adjusted_pvals_from_corr_test = p.adjust(as.numeric(place_to_store_df[,2]), method=c("fdr"))
+hist(adjusted_pvals_from_corr_test)
+
+
+
+##Trying some random forest classification
+set.seed(1)
+random_forest_df = data.frame("OTU_table" = ASVs_for_analysis, "Treatment" = sample_metadata$Treatment)
+modeling <- train(x = ASVs_for_analysis, y =)
