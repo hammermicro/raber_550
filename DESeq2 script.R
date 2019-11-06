@@ -60,11 +60,11 @@ phyloseq_object <- physeq
 ### DESeq2, just trying to get this to run completely
 # Some covariates to consider are "Sex", "Treatment", "AMDarkAverage", "OFTotDistDay1", "OFCentDur1", "NOObjpref", "FSTTimeImmobile", "FCCuedFrzTone", "Radiated"
 sigtab <- NULL
-treatdds = phyloseq_to_deseq2(phyloseq_object, ~Radiated)
+treatdds = phyloseq_to_deseq2(phyloseq_object, ~Bodyweight)
 treatdds.deseq = DESeq(treatdds)
 res = results(treatdds.deseq, cooksCutoff=FALSE)
 res = data.frame(res)
-alpha = 0.05
+alpha = 0.1
 remove_nas <- is.na(res$adj)
 sigtab <- subset(res, remove_nas)
 res <- subset(res, !is.na(res$padj))
@@ -77,7 +77,7 @@ phyloseq_object1 = rarefy_even_depth(phyloseq_object)
 asv_table=t(otu_table(phyloseq_object1))
 sample_data_to_smash=sample_data(phyloseq_object1)
 taxa_table_plus_metadata <- data.frame(cbind(data.frame(asv_table), data.frame(sample_data_to_smash)))
-plotting_taxa <- ggplot(taxa_table_plus_metadata, aes(x=Radiated, y=ASV203))+ geom_boxplot()
+plotting_taxa <- ggplot(taxa_table_plus_metadata, aes(x=Bodyweight, y=ASV127)) + geom_jitter() + geom_smooth()
 plotting_taxa
 
 
@@ -97,7 +97,7 @@ sigtab$Phylum = factor(as.character(sigtab$Phylum), levels=names(x))
 x = tapply(sigtab$log2FoldChange, sigtab$Genus, function(x) max(x))
 x = sort(x, TRUE)
 sigtab$Genus = factor(as.character(sigtab$Genus), levels=names(x))
-ggplot(sigtab, aes(x=Genus, y=log2FoldChange, color=Phylum)) + geom_point(size=6) + 
+ggplot(sigtab, aes(x=Genus, y=log2FoldChange, color=Phylum)) + geom_point(size=1) + 
   theme(axis.text.x = element_text(angle = -90, hjust = 0, vjust=0.5))
 
 
