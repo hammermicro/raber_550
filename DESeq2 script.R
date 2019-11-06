@@ -11,6 +11,7 @@ library("readxl")
 library("dplyr")
 library("vegan")
 library("DESeq2")
+library("knitr")
 
 
 # I want to read in the file and just figure out what it looks like after
@@ -48,29 +49,41 @@ taxa_names(physeq) <- paste0("ASV", seq(ntaxa(physeq)))
 physeq = subset_samples(physeq, sample_names(physeq) != "93")
 physeq = subset_samples(physeq, sample_names(physeq) != "59")
 phyloseq_object <- physeq
+sample_data(physeq)$Radiated <- get_variable(physeq, "Treatment") %in% c("25","50","200")
 
 
-
-#Does rarefying change the number of significant ASVs?
+#Does rarefaction change the number of significant ASVs?
 set.seed(1)
 phyloseq_object <- physeq
-phyloseq_oject <- rarefy_even_depth(physeq)
 #If you want to agglomerate to a partcular level before analysis
-phyloseq_object <- tax_glom(physeq, taxrank="Family")
+##phyloseq_object <- tax_glom(physeq, taxrank="Genus")
 ### DESeq2, just trying to get this to run completely
 # Some covariates to consider are "Sex", "Treatment", "AMDarkAverage", "OFTotDistDay1", "OFCentDur1", "NOObjpref", "FSTTimeImmobile", "FCCuedFrzTone", "Radiated"
 sigtab <- NULL
-treatdds = phyloseq_to_deseq2(phyloseq_object, ~Treatment*Sex)
+treatdds = phyloseq_to_deseq2(phyloseq_object, ~Radiated)
 treatdds.deseq = DESeq(treatdds)
 res = results(treatdds.deseq, cooksCutoff=FALSE)
 res = data.frame(res)
-alpha = 0.01
+alpha = 0.05
 remove_nas <- is.na(res$adj)
 sigtab <- subset(res, remove_nas)
 res <- subset(res, !is.na(res$padj))
 sigtab <- subset(res, res$padj < alpha)
 sigtab = cbind(as(sigtab, "data.frame"), as(tax_table(physeq1)[rownames(sigtab), ], "matrix"))
 print(sigtab)
+
+
+phyloseq_object1 = rarefy_even_depth(phyloseq_object)
+asv_table=t(otu_table(phyloseq_object1))
+sample_data_to_smash=sample_data(phyloseq_object1)
+taxa_table_plus_metadata <- data.frame(cbind(data.frame(asv_table), data.frame(sample_data_to_smash)))
+plotting_taxa <- ggplot(taxa_table_plus_metadata, aes(x=Radiated, y=ASV203))+ geom_boxplot()
+plotting_taxa
+
+
+
+
+
 
 theme_set(theme_bw())
 scale_fill_discrete <- function(palname = "Set1", ...) {
