@@ -36,12 +36,14 @@ sample_data(physeq1)$Radiated <- get_variable(physeq1, "Treatment") %in% c("25",
 
 
 ```{r alphadiv}
-## While the p-value for ANOVA of alphadiv~Treatment isn't significant (Pr(>F)~0.13), it might be useful to briefly mention this in light of Keaton's previous analysis which showed an increase in alphadiv associated with increased radiation exposure.
-sample_data(physeq1)$Alphadiv <- estimate_richness(physeq1, split=TRUE, measures=c("Shannon"))
+## While the p-value for ANOVA of alphadiv~Treatment isn't extremely low (Pr(>F)~0.13), Shannon~Treatment*Sex (Pr(>F)~0.06), Observed~Treatment (Pr(>F)~0.06) it might be useful to briefly mention this in light of Keaton's previous analysis which showed an increase in alphadiv associated with increased radiation exposure.
+## Should maybe look at mean #ofgenera observed as a function of radiation level. Considering the low count #s post-glom with phyloseq, is this going to be descriptive or meaningful?
+sample_data(physeq1)$Alphadiv <- estimate_richness(physeq1, split=TRUE, measures=c("Observed"))
 anova_df <- data.frame(sample_data(physeq1))
-aov_results <- aov(as.matrix(Alphadiv) ~ Treatment, data=anova_df)
+aov_results <- aov(as.matrix(Alphadiv) ~ Treatment*Sex, data=anova_df)
 anova_results <- anova(aov_results)
 some_plot <- boxplot((as.matrix(Alphadiv))~Treatment, data=anova_df)
+anova_lm <- lm(as.matrix(Alphadiv) ~Treatment, data=anova_df)
 print(anova_results)
 ```
 
