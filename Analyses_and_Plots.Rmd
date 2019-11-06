@@ -8,15 +8,17 @@ output: pdf_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-
 library("ggplot2")
-library("phyloseq")
+
 library("dplyr")
 library("vegan")
 library("DESeq2")
 library("knitr")
 
+
 ```{r make_phyloseq_object, echo=FALSE}
+library("readxl")
+library("phyloseq")
 seqtab <- readRDS("C:/Users/hammera/Desktop/raber_550/data/reads_290190_seqtab_final.rds")
 seqtab.taxa <- readRDS("C:/Users/hammera/Desktop/raber_550/data/reads_290190_taxa_final.rds")
 seqtab <- (seqtab)
@@ -37,7 +39,8 @@ sample_data(physeq1)$Radiated <- get_variable(physeq1, "Treatment") %in% c("25",
 
 ```{r alphadiv}
 ## While the p-value for ANOVA of alphadiv~Treatment isn't extremely low (Pr(>F)~0.13), Shannon~Treatment*Sex (Pr(>F)~0.06), Observed~Treatment (Pr(>F)~0.06) it might be useful to briefly mention this in light of Keaton's previous analysis which showed an increase in alphadiv associated with increased radiation exposure.
-## Should maybe look at mean #ofgenera observed as a function of radiation level. Considering the low count #s post-glom with phyloseq, is this going to be descriptive or meaningful?
+## Should maybe look at mean #ofgenera observed as a function of radiation level. Considering the low count #s post-glom with phyloseq, is this going to be descriptive or meaningful
+library("phyloseq")
 sample_data(physeq1)$Alphadiv <- estimate_richness(physeq1, split=TRUE, measures=c("Observed"))
 anova_df <- data.frame(sample_data(physeq1))
 aov_results <- aov(as.matrix(Alphadiv) ~ Treatment*Sex, data=anova_df)
@@ -47,12 +50,60 @@ anova_lm <- lm(as.matrix(Alphadiv) ~Treatment, data=anova_df)
 print(anova_results)
 ```
 
-## Including Plots
 
-You can also embed plots, for example:
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r enfit, echo=FALSE}
+## 
+library("vegan")
+treatment.env <- data.frame(sample_data(physeq1))
+physeq1.rda <- rda(otu_table(physeq1)~Sex+Treatment+FSTTimeImmobile+NOObjpref+OFCentDur1+FCCuedFrzTone+OFTotDistDay1, data=treatment.env)
+##physeq1.enfit <- envfit(physeq1.rda~Sex+Treatment+FSTTimeImmobile+NOObjpref+OFCentDur1+FCCuedFrzTone+OFTotDistDay1, data=(treatment.env), perm=5000)
+##plot(physeq1.rda, type="t")
+physeq_ordination <- decorana(data.frame(otu_table(physeq1)))
+physeq_enfit <- envfit(physeq_ordination~Treatment*Sex+FSTTimeImmobile+NOObjpref+OFCentDur1+FCCuedFrzTone+OFTotDistDay1, data=treatment.env, perm=1000)
+plot(physeq_ordination)
+plot(physeq_enfit)
+#plot(physeq1.enfit)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r bray_by_Sex_Treatment, echo=FALSE}
+library(phyloseq)
+physeq1.ord <- ordinate(physeq1, "NMDS", "bray")
+sample_data(physeq1)$Treatment <- as.factor(sample_data(physeq1)$Treatment)
+physeq1.ord.plot <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Sex", title="BySex", shape="Treatment")
+plot(physeq1.ord.plot)
+physeq1.ord.plot.treatment <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Sex_Treatment", title="BySex_Treatment")
+plot(physeq1.ord.plot.treatment)
+```
+
+```{r adonis_results}
+## Using adonis to evaluate the importance of covariates in explaining variation in the ordination produced using bray. Treatment*Sex has a large relative R2, and the Pr(>F) is quite low. 
+set.seed(1)
+physeq1 <- rarefy_even_depth(physeq1)
+physeq1.dist <- vegdist(otu_table(physeq1), method="bray")
+sampledf <- data.frame(sample_data(physeq1))
+set.seed(1)
+perm.results.treatment <- adonis(physeq1.dist ~ Treatment*Sex, data=sampledf, permutations=5000)
+perm.results.treatment
+
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
