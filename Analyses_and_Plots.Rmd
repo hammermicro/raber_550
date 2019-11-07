@@ -38,15 +38,14 @@ sample_data(physeq1)$Radiated <- get_variable(physeq1, "Treatment") %in% c("25",
 
 
 ```{r alphadiv}
-## While the p-value for ANOVA of alphadiv~Treatment isn't extremely low (Pr(>F)~0.13), Shannon~Treatment*Sex (Pr(>F)~0.06), Observed~Treatment (Pr(>F)~0.06) it might be useful to briefly mention this in light of Keaton's previous analysis which showed an increase in alphadiv associated with increased radiation exposure.
+## While the p-value for ANOVA of alphadiv~Treatment isn't extremely low (Pr(>F)~0.13), Shannon~Treatment*Sex (Pr(>F)~0.06), Observed~Treatment (Pr(>F)~0.06) it might be useful to briefly mention this in light of Keaton's previous analysis which showed an increase in alphadiv associated with increased radiation exposure. However, this test also functions with the assumptions necessary for running ANOVA about which I am not certain.
 ## Should maybe look at mean #ofgenera observed as a function of radiation level. Considering the low count #s post-glom with phyloseq, is this going to be descriptive or meaningful
 library("phyloseq")
-sample_data(physeq1)$Alphadiv <- estimate_richness(physeq1, split=TRUE, measures=c("Observed"))
+sample_data(physeq1)$Alphadiv <- estimate_richness(physeq1, split=TRUE, measures=c("Shannon"))
 anova_df <- data.frame(sample_data(physeq1))
 aov_results <- aov(as.matrix(Alphadiv) ~ Treatment*Sex, data=anova_df)
 anova_results <- anova(aov_results)
 some_plot <- boxplot((as.matrix(Alphadiv))~Treatment, data=anova_df)
-anova_lm <- lm(as.matrix(Alphadiv) ~Treatment, data=anova_df)
 print(anova_results)
 ```
 
@@ -67,43 +66,79 @@ plot(physeq_enfit)
 ```
 
 ```{r bray_by_Sex_Treatment, echo=FALSE}
-library(phyloseq)
+library("phyloseq")
 physeq1.ord <- ordinate(physeq1, "NMDS", "bray")
 sample_data(physeq1)$Treatment <- as.factor(sample_data(physeq1)$Treatment)
 physeq1.ord.plot <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Sex", title="BySex", shape="Treatment")
 plot(physeq1.ord.plot)
-physeq1.ord.plot.treatment <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Sex_Treatment", title="BySex_Treatment")
+physeq1.ord.treatment <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Treatment", title="ByTreatment", shape="Sex")
+plot(physeq1.ord.treatment)
+physeq1.ord.plot.treatment <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Sex_Treatment", title="BySex_Treatment") ##optional parameter for any of the above plots + stat_ellipse(level=0.4)
 plot(physeq1.ord.plot.treatment)
 ```
 
 ```{r adonis_results}
 ## Using adonis to evaluate the importance of covariates in explaining variation in the ordination produced using bray. Treatment*Sex has a large relative R2, and the Pr(>F) is quite low. 
+library("phyloseq")
+library("vegan")
 set.seed(1)
 physeq1 <- rarefy_even_depth(physeq1)
 physeq1.dist <- vegdist(otu_table(physeq1), method="bray")
 sampledf <- data.frame(sample_data(physeq1))
 set.seed(1)
 perm.results.treatment <- adonis(physeq1.dist ~ Treatment*Sex, data=sampledf, permutations=5000)
-perm.results.treatment
+print(perm.results.treatment)
 
+```
 
-
-
+```{r capscale_ordistep}
+## We ran through possible permutations and options for model selection using AIC in ordistep after building a model in capscale. Results are available via mod. The best model found after running through covariate permutations was Treatment*Sex.
+sampledf <- data.frame(sample_data(physeq1))
+physeq1.capsca <- capscale(physeq1.dist ~ Treatment*Sex, sampledf, dist="bray")
+set.seed(1)
+mod <- ordistep(physeq1.capsca, perm.max = 5000, trace = T, direction = "both")
+print(mod)
 ```
 
 
 
+```{r betadispersion}
+## The graphical results of this suggest that there might be a difference in mean betadispersion, with particularly low dispersion among the highly radiated groups. Is lower betadispersion associated with higher radiation levels? Would that suggest that there are more relatively limited conformations adopted by the murine gut microbiome in association with radiation?
+## Do I need to correct for multiple pairwise comparisons?
+treatments <- factor(sample_data(physeq1)$Sex_Treatment)
+betadispersion <- betadisper(physeq1.dist, treatments, type=c("centroid"))
+boxplot(betadispersion)
+set.seed(1)
+testbetad <- permutest(betadispersion, pairwise=TRUE, permutations=5000)
+print(testbetad)
+beta_disp_tukey_result <- TukeyHSD(betadispersion, ordered=FALSE, conf.level=0.95)
+```
+
+```{r ASV_analysis}
+
+##This is a basic workthrough that 
+sigtab <- NULL
+treatdds = phyloseq_to_deseq2(phyloseq_object, ~Sex)
+treatdds.deseq = DESeq(treatdds)
+res = results(treatdds.deseq, cooksCutoff=FALSE)
+res = data.frame(res)
+alpha = 0.1
+remove_nas <- is.na(res$adj)
+sigtab <- subset(res, remove_nas)
+res <- subset(res, !is.na(res$padj))
+sigtab <- subset(res, res$padj < alpha)
+sigtab = cbind(as(sigtab, "data.frame"), as(tax_table(physeq1)[rownames(sigtab), ], "matrix"))
+print(sigtab)
 
 
+phyloseq_object1 = rarefy_even_depth(phyloseq_object)
+asv_table=t(otu_table(phyloseq_object1))
+sample_data_to_smash=sample_data(phyloseq_object1)
+taxa_table_plus_metadata <- data.frame(cbind(data.frame(asv_table), data.frame(sample_data_to_smash)))
+plotting_taxa <- ggplot(taxa_table_plus_metadata, aes(x=Sex, y=ASV48)) + geom_jitter() + geom_boxplot()
+plotting_taxa
 
-
-
-
-
-
-
-
-
+````
 
 
 
