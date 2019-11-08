@@ -9,7 +9,6 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 library("ggplot2")
-
 library("dplyr")
 library("vegan")
 library("DESeq2")
@@ -36,7 +35,6 @@ physeq1 <- physeq
 sample_data(physeq1)$Radiated <- get_variable(physeq1, "Treatment") %in% c("25","50","200")
 ```
 
-
 ```{r alphadiv}
 ## While the p-value for ANOVA of alphadiv~Treatment isn't extremely low (Pr(>F)~0.13), Shannon~Treatment*Sex (Pr(>F)~0.06), Observed~Treatment (Pr(>F)~0.06) it might be useful to briefly mention this in light of Keaton's previous analysis which showed an increase in alphadiv associated with increased radiation exposure. However, this test also functions with the assumptions necessary for running ANOVA about which I am not certain.
 ## Should maybe look at mean #ofgenera observed as a function of radiation level. Considering the low count #s post-glom with phyloseq, is this going to be descriptive or meaningful
@@ -48,8 +46,6 @@ anova_results <- anova(aov_results)
 some_plot <- boxplot((as.matrix(Alphadiv))~Treatment, data=anova_df)
 print(anova_results)
 ```
-
-
 
 ```{r enfit, echo=FALSE}
 ## 
@@ -100,12 +96,10 @@ mod <- ordistep(physeq1.capsca, perm.max = 5000, trace = T, direction = "both")
 print(mod)
 ```
 
-
-
 ```{r betadispersion}
 ## The graphical results of this suggest that there might be a difference in mean betadispersion, with particularly low dispersion among the highly radiated groups. Is lower betadispersion associated with higher radiation levels? Would that suggest that there are more relatively limited conformations adopted by the murine gut microbiome in association with radiation?
 ## Do I need to correct for multiple pairwise comparisons?
-treatments <- factor(sample_data(physeq1)$Sex_Treatment)
+treatments <- factor(sample_data(physeq1)$Treatment)
 betadispersion <- betadisper(physeq1.dist, treatments, type=c("centroid"))
 boxplot(betadispersion)
 set.seed(1)
@@ -114,11 +108,11 @@ print(testbetad)
 beta_disp_tukey_result <- TukeyHSD(betadispersion, ordered=FALSE, conf.level=0.95)
 ```
 
-```{r ASV_analysis}
-
-##This is a basic workthrough that 
+```{r deseq2_function}
+library("phyloseq")
+taxa_with_deseq <- function(treatdds.deseq, physeq1){ 
 sigtab <- NULL
-treatdds = phyloseq_to_deseq2(phyloseq_object, ~Sex)
+##treatdds = phyloseq_to_deseq2(phyloseq_object, ~"some_covariate")
 treatdds.deseq = DESeq(treatdds)
 res = results(treatdds.deseq, cooksCutoff=FALSE)
 res = data.frame(res)
@@ -127,18 +121,152 @@ remove_nas <- is.na(res$adj)
 sigtab <- subset(res, remove_nas)
 res <- subset(res, !is.na(res$padj))
 sigtab <- subset(res, res$padj < alpha)
+if (nrow(sigtab)>0){
+sigtab = cbind(as(sigtab, "data.frame"), as(tax_table(physeq1)[rownames(sigtab), ], "matrix"))
+return(sigtab)
+} else {
+  return("No significant taxa were identified using the specified formula")
+}
+}
+
+```
+
+```{r ASV_analysis}
+## This first step agglomerates to a chosen level, then you can use the workthrough below to continue the analysis
+## Covariates = Sex+Treatment+FSTTimeImmobile+NOObjpref+OFCentDur1+FCCuedFrzTone+OFTotDistDay1
+library(DESeq2)
+set.seed(1)
+phyloseq_object <- physeq1
+physeq_genus <- tax_glom(physeq, taxrank="Genus")
+##This is a basic workthrough that runs DESeq2 for analysis of taxa analysis. One thing that that I should consider is filtering the available taxa to so that only taxa that are present in 50% of samples or greater. This would eliminate this issue where differences are inflated by the presence of a bunch of zeros for a particular group. I think that effect could largely be driven by the Box covariate, which is possibly suggested in the adonis results as well.
+## A couple limitations 
+sigtab <- NULL
+treatdds = phyloseq_to_deseq2(physeq_genus, ~OFTotDistDay1)
+treatdds.deseq = DESeq(treatdds)
+res = results(treatdds.deseq, cooksCutoff=FALSE)
+res = data.frame(res)
+alpha = 0.1
+remove_nas <- is.na(res$adj)
+sigtab <- subset(res, remove_nas)
+res <- subset(res, !is.na(res$padj))
+sigtab <- subset(res, res$padj < alpha)
+if (nrow(sigtab)>0){
 sigtab = cbind(as(sigtab, "data.frame"), as(tax_table(physeq1)[rownames(sigtab), ], "matrix"))
 print(sigtab)
+} else {
+  print("No significant taxa were identified using the specified formula")
+}
 
+## Generate a couple of sigtab tables that reflect significant taxa according to behavioral covariates and permutations of Treatment/Sex. Does Treatment*Sex include Treatment, Sex, and Treatment*Sex taxa? perform at each level and see
+## After generating the taxa tables, see which taxa might be common between sets
+## Get a feel for the taxa present by looking at microbes observed in Keaton's work, and what might have been observed elsewhere 
 
 phyloseq_object1 = rarefy_even_depth(phyloseq_object)
-asv_table=t(otu_table(phyloseq_object1))
+asv_table=(otu_table(phyloseq_object1))
 sample_data_to_smash=sample_data(phyloseq_object1)
 taxa_table_plus_metadata <- data.frame(cbind(data.frame(asv_table), data.frame(sample_data_to_smash)))
-plotting_taxa <- ggplot(taxa_table_plus_metadata, aes(x=Sex, y=ASV48)) + geom_jitter() + geom_boxplot()
-plotting_taxa
+##plotting_taxa <- ggplot(taxa_table_plus_metadata, aes(x=Treatment, y=ASV92)) + geom_smooth()##+ geom_jitter() 
+##plotting_taxa
 
-````
+```
+
+```{r ASV_by_OFTotDistDay1}
+## DESeq2 analysis using the specified covariate (ASV level)
+treatdds = phyloseq_to_deseq2(phyloseq_object, ~OFTotDistDay1)
+## Generated table containing ASVs
+OFTotDistDay1_ASVs <- taxa_with_deseq(treatdds, physeq1)
+print(OFTotDistDay1_ASVs)
+## DESeq2 genus level analysis using OFTotDistDay1
+treatdds = phyloseq_to_deseq2(physeq_genus, ~OFTotDistDay1)
+## Genus level table
+OFTotDistDay1_genus <- taxa_with_deseq(treatdds, physeq_genus)
+print(OFTotDistDay1_genus)
+```
+
+```{r ASV_by_FSTTimeImmobile}
+## DESeq2 analysis using the specified covariate (ASV level)
+treatdds = phyloseq_to_deseq2(phyloseq_object, ~FSTTimeImmobile)
+## Generated table containing ASVs
+FSTTimeImmobile_ASVs <- taxa_with_deseq(treatdds, physeq1)
+print(FSTTimeImmobile_ASVs)
+## DESeq2 genus level analysis using FSTTimeImmobile
+treatdds = phyloseq_to_deseq2(physeq_genus, ~FSTTimeImmobile)
+## Genus level table
+FSTTimeImmobile_genus <- taxa_with_deseq(treatdds, physeq_genus)
+print(FSTTimeImmobile_genus)
+```
+
+```{r ASV_by_NOObjpref}
+## Convert to deseq2 object using the specified covariate
+treatdds = phyloseq_to_deseq2(phyloseq_object, ~NOObjpref)
+## Generated table containing ASVs
+NOObjpref_ASVs <- taxa_with_deseq(treatdds, physeq1)
+print(NOObjpref_ASVs)
+## DESeq2 analysis using NOObjpref
+treatdds = phyloseq_to_deseq2(physeq_genus, ~NOObjpref)
+## Genus level table
+NOObjpref_genus <- taxa_with_deseq(treatdds, physeq_genus)
+print(NOObjpref_genus)
+```
+
+```{r ASV_by_OFCentDur1}
+## Convert to deseq2 object using the specified covariate
+treatdds = phyloseq_to_deseq2(phyloseq_object, ~OFCentDur1)
+## Generated table containing ASVs
+OFCentDur1_ASVs <- taxa_with_deseq(treatdds, physeq1)
+print(OFCentDur1_ASVs)
+## DESeq2 analysis using OFCentDur1
+treatdds = phyloseq_to_deseq2(physeq_genus, ~OFCentDur1)
+## Genus level table
+OFCentDur1_genus <- taxa_with_deseq(treatdds, physeq_genus)
+print(OFCentDur1_genus)
+```
+
+```{r ASV_by_Treatment}
+## Convert to deseq2 object using the specified covariate
+treatdds = phyloseq_to_deseq2(phyloseq_object, ~Treatment)
+## Generated table containing ASVs
+Treatment_ASVs <- taxa_with_deseq(treatdds, physeq1)
+print(Treatment_ASVs)
+## DESeq2 analysis using Treatment
+treatdds = phyloseq_to_deseq2(physeq_genus, ~Treatment)
+## Genus level table
+Treatment_genus <- taxa_with_deseq(treatdds, physeq_genus)
+print(Treatment_genus)
+```
+
+```{r ASV_by_Sex}
+## Convert to deseq2 object using the specified covariate
+treatdds = phyloseq_to_deseq2(phyloseq_object, ~Sex)
+## Generated table containing ASVs
+Sex_ASVs <- taxa_with_deseq(treatdds, physeq1)
+print(Sex_ASVs)
+## DESeq2 analysis using Sex
+treatdds = phyloseq_to_deseq2(physeq_genus, ~Sex)
+## Genus level table
+Sex_genus <- taxa_with_deseq(treatdds, physeq_genus)
+print(Sex_genus)
+```
+
+```{r ASV_by_Treatment_interaction_Sex}
+## Convert to deseq2 object using the specified covariate
+treatdds = phyloseq_to_deseq2(phyloseq_object, ~Treatment*Sex)
+## Generated table containing ASVs
+Treatment_Sex_ASVs <- taxa_with_deseq(treatdds, physeq1)
+print(Treatment_Sex_ASVs)
+## DESeq2 analysis using Treatment*Sex
+treatdds = phyloseq_to_deseq2(physeq_genus, ~Treatment*Sex)
+## Genus level table
+Treatment_Sex_genus <- taxa_with_deseq(treatdds, physeq_genus)
+print(Treatment_Sex_genus)
+```
+
+
+
+
+
+
+
 
 
 
