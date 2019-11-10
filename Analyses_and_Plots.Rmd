@@ -207,6 +207,13 @@ treatdds = phyloseq_to_deseq2(physeq_genus, ~NOObjpref)
 ## Genus level table
 NOObjpref_genus <- taxa_with_deseq(treatdds, physeq_genus)
 print(NOObjpref_genus)
+
+asv_table=(otu_table(phyloseq_object))
+sample_data_to_smash=sample_data(phyloseq_object)
+taxa_table_plus_metadata <- data.frame(cbind(data.frame(asv_table), data.frame(sample_data_to_smash)))
+plotting_taxa <- ggplot(taxa_table_plus_metadata, aes(x=Treatment, y=ASV2225)) + geom_point() + geom_smooth() + geom_jitter() 
+plotting_taxa
+
 ```
 
 ```{r ASV_by_OFCentDur1}
