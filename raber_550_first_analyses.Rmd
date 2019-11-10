@@ -105,7 +105,10 @@ alphadiv <- as.matrix(sample_data(physeq1)$Alphadiv)
 # after rarefaction, still didn't find a significant association
 # between Alphadiv and Treatment/Radiation
 anova_df <- data.frame(sample_data(physeq1))
-anova_results <- aov(as.matrix(Alphadiv) ~ Treatment, data=anova_df)
+aov_results <- aov(as.matrix(Alphadiv) ~ Treatment, data=anova_df)
+anova_results <- anova(aov_results)
+some_plot <- boxplot((as.matrix(Alphadiv))~Treatment, data=anova_df)
+print(anova_results)
 summary(anova_results)
 
 # Looking at alpha diversity (Shannon) as a function of radiation
@@ -141,7 +144,7 @@ plot(lm_of_alphadiv)
 # F vs F+R also doesn't appear to change much visually, but check that
 # with some real numbers/analysis
 physeq1.ord <- ordinate(physeq1, "NMDS", "jaccard")
-physeq1.ord.plot.treatment <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Treatment", title="ByTreatment")
+physeq1.ord.plot.treatment <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Sex_Treatment", title="ByTreatment")
 
 ```{r physeq_ord_w_ellipse, echo=TRUE}
 # This displays a plot of the ordination
@@ -179,12 +182,12 @@ print(physeq1.ord.plot) + stat_ellipse(level=0.6)
 # Sex        1    0.6266 0.62660  2.0312 0.02093  2e-04 ***
 # Box        1    0.6767 0.67668  2.1973 0.02261  2e-04 ***
 covariates <- c("Sex", "Treatment", "AMDarkAverage", "OFTotDistDay1", "OFCentDur1", "NOObjpref", "FSTTimeImmobile", "FCCuedFrzTone", "Radiated")
+set.seed(1)
+physeq1 <- rarefy_even_depth(physeq1)
 physeq1.dist <- vegdist(otu_table(physeq1), method="bray")
 sampledf <- data.frame(sample_data(physeq1))
-# Running the below code with Sex_Treatment yielded an R2 of nearly 10%, but this is a post-hoc observation that isn't necessarily meaningful
-# Look at how this runs on rarefied data instead of the crap you're feeding it now
 set.seed(1)
-perm.results.treatment <- adonis(physeq1.dist ~ OFTotDistDay1, data=sampledf, permutations=5000)
+perm.results.treatment <- adonis(physeq1.dist ~ Box, data=sampledf, permutations=5000)
 perm.results.treatment
 
 # plotting betadispersion
@@ -201,10 +204,6 @@ beta_disp_200 <- c(betadispersion$distances[betadispersion$group == "200"])
 # Does this invalidat the Tukey result earlier? I think that requires a normal distribution
 shapiro.test(as.numeric(betadispersion$distances))
 
-## I can't get the data into a df for post-hoc analysis because the columns are different lengths as a result of trimming samples earlier, so see Tukey below and talk with Tom
-#beta_disper_data_frame <- data.frame(group=c("group_0","group_25"), distance= c(beta_disp_0, beta_disp_25))
-#wilcoxon_results <- wilcox.test(distances ~ group, data=beta_distper_data_frame)
-
 # The code above gave a result that suggests only the 200-50 group is significantly different, running this on Sex_Treatment yields a significant adjusted p-val for only F50 and M200/F200
 # As there is not a significant difference between groups other than F50 and M200/F200, significant differences in beta-diversity are (mostly?) not attributable to differences in dispersion
 
@@ -216,7 +215,7 @@ plot(betadispersion)
 #pvalue <0.05 for test below, permutest is basically anova in the vegan package
 # 
 set.seed(1)
-testbetad <- permutest(betadispersion, permutations=5000)
+testbetad <- permutest(betadispersion, pairwise=TRUE, permutations=5000)
 anova(betadispersion)
 indiv_group <- betadispersion$distances
 print(indiv_group)

@@ -56,11 +56,11 @@ sample_data(physeq)$Radiated <- get_variable(physeq, "Treatment") %in% c("25","5
 set.seed(1)
 phyloseq_object <- physeq
 #If you want to agglomerate to a partcular level before analysis
-##phyloseq_object <- tax_glom(physeq, taxrank="Genus")
+phyloseq_object <- tax_glom(physeq, taxrank="Genus")
 ### DESeq2, just trying to get this to run completely
 # Some covariates to consider are "Sex", "Treatment", "AMDarkAverage", "OFTotDistDay1", "OFCentDur1", "NOObjpref", "FSTTimeImmobile", "FCCuedFrzTone", "Radiated"
 sigtab <- NULL
-treatdds = phyloseq_to_deseq2(phyloseq_object, ~Bodyweight)
+treatdds = phyloseq_to_deseq2(phyloseq_object, ~Treatment + Box)
 treatdds.deseq = DESeq(treatdds)
 res = results(treatdds.deseq, cooksCutoff=FALSE)
 res = data.frame(res)
@@ -74,12 +74,12 @@ print(sigtab)
 
 
 phyloseq_object1 = rarefy_even_depth(phyloseq_object)
-asv_table=t(otu_table(phyloseq_object1))
+asv_table=(otu_table(phyloseq_object1))
 sample_data_to_smash=sample_data(phyloseq_object1)
 taxa_table_plus_metadata <- data.frame(cbind(data.frame(asv_table), data.frame(sample_data_to_smash)))
-plotting_taxa <- ggplot(taxa_table_plus_metadata, aes(x=Bodyweight, y=ASV127)) + geom_jitter() + geom_smooth()
+plotting_taxa <- ggplot(taxa_table_plus_metadata, aes(x=Treatment, y=ASV260, color=Box)) + geom_jitter() + geom_smooth()
 plotting_taxa
-
+
 
 
 
