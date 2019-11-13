@@ -161,7 +161,7 @@ print(sigtab)
 ## After generating the taxa tables, see which taxa might be common between sets
 ## Get a feel for the taxa present by looking at microbes observed in Keaton's work, and what might have been observed elsewhere 
 
-phyloseq_object1 = rarefy_even_depth(phyloseq_object)
+
 asv_table=(otu_table(phyloseq_object1))
 sample_data_to_smash=sample_data(phyloseq_object1)
 taxa_table_plus_metadata <- data.frame(cbind(data.frame(asv_table), data.frame(sample_data_to_smash)))
@@ -268,7 +268,25 @@ Treatment_Sex_genus <- taxa_with_deseq(treatdds, physeq_genus)
 print(Treatment_Sex_genus)
 ```
 
+```{r ASV_by_FCcuedFrzTone}
+## Convert to deseq2 object using the specified covariate
+treatdds = phyloseq_to_deseq2(phyloseq_object, ~FCCuedFrzTone)
+## Generated table containing ASVs
+FCCuedFrzTone_ASVs <- taxa_with_deseq(treatdds, physeq1)
+print(FCCuedFrzTone_ASVs)
+## DESeq2 analysis using Treatment*Sex
+treatdds = phyloseq_to_deseq2(physeq_genus, ~FCCuedFrzTone)
+## Genus level table
+FCCuedFrzTone_genus <- taxa_with_deseq(treatdds, physeq_genus)
+print(FCCuedFrzTone_genus)
 
+asv_table=(otu_table(physeq))
+sample_data_to_smash=sample_data(physeq)
+taxa_table_plus_metadata <- data.frame(cbind(data.frame(asv_table), data.frame(sample_data_to_smash)))
+plotting_taxa <- ggplot(taxa_table_plus_metadata, aes(x=FCCuedFrzTone, y=ASV1774)) + geom_smooth()##+ geom_jitter() 
+plotting_taxa
+
+```
 
 
 
