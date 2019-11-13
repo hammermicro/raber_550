@@ -137,7 +137,7 @@ return(sigtab)
 library(DESeq2)
 set.seed(1)
 phyloseq_object <- physeq1
-physeq_genus <- tax_glom(physeq, taxrank="Genus")
+physeq_genus <- tax_glom(physeq, taxrank="Order")
 ##This is a basic workthrough that runs DESeq2 for analysis of taxa analysis. One thing that that I should consider is filtering the available taxa to so that only taxa that are present in 50% of samples or greater. This would eliminate this issue where differences are inflated by the presence of a bunch of zeros for a particular group. I think that effect could largely be driven by the Box covariate, which is possibly suggested in the adonis results as well.
 ## A couple limitations 
 sigtab <- NULL
@@ -227,7 +227,7 @@ treatdds = phyloseq_to_deseq2(physeq_genus, ~OFCentDur1)
 ## Genus level table
 OFCentDur1_genus <- taxa_with_deseq(treatdds, physeq_genus)
 print(OFCentDur1_genus)
-```
+
 
 ```{r ASV_by_Treatment}
 ## Convert to deseq2 object using the specified covariate
@@ -240,6 +240,14 @@ treatdds = phyloseq_to_deseq2(physeq_genus, ~Treatment)
 ## Genus level table
 Treatment_genus <- taxa_with_deseq(treatdds, physeq_genus)
 print(Treatment_genus)
+## The Anaeroplasma identified in the genus level analysis
+asv_table=(otu_table(physeq_genus))
+sample_data_to_smash=sample_data(physeq_genus)
+taxa_table_plus_metadata <- data.frame(cbind(data.frame(asv_table), data.frame(sample_data_to_smash)))
+plotting_taxa <- ggplot(taxa_table_plus_metadata, aes(x=Treatment, y=ASV656)) + geom_jitter() + geom_smooth()
+plotting_taxa
+
+
 ```
 
 ```{r ASV_by_Sex}
@@ -280,10 +288,10 @@ treatdds = phyloseq_to_deseq2(physeq_genus, ~FCCuedFrzTone)
 FCCuedFrzTone_genus <- taxa_with_deseq(treatdds, physeq_genus)
 print(FCCuedFrzTone_genus)
 
-asv_table=(otu_table(physeq))
-sample_data_to_smash=sample_data(physeq)
+asv_table=(otu_table(physeq_genus))
+sample_data_to_smash=sample_data(physeq_genus)
 taxa_table_plus_metadata <- data.frame(cbind(data.frame(asv_table), data.frame(sample_data_to_smash)))
-plotting_taxa <- ggplot(taxa_table_plus_metadata, aes(x=FCCuedFrzTone, y=ASV1774)) + geom_smooth()##+ geom_jitter() 
+plotting_taxa <- ggplot(taxa_table_plus_metadata, aes(x=Treatment, y=ASV2432)) + geom_jitter() 
 plotting_taxa
 
 ```
