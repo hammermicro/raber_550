@@ -61,15 +61,28 @@ plot(physeq_enfit)
 #plot(physeq1.enfit)
 ```
 
+```{r nmds_different_axes}
+set.seed(1)
+physeq_nmds = metaMDS(otu_table(physeq1), distance="bray", k=4, trymax=1000, data=treatment.env)
+nmds_table = scores(physeq_nmds, display="sites")
+plot(nmds_table[,1], nmds_table[,4], main="Bray-Curtis 1:3", pch=20, col=c("(treatment.env$Treatment)
+physeq1_ordination <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Treatment", title="ByTreatment", shape="Sex") + stat_ellipse(level=0.4)
+plot(physeq1.ord.treatment)
+
+
+```
+
+
+
 ```{r bray_by_Sex_Treatment, echo=FALSE}
 library("phyloseq")
 physeq1.ord <- ordinate(physeq1, "NMDS", "bray")
 sample_data(physeq1)$Treatment <- as.factor(sample_data(physeq1)$Treatment)
-physeq1.ord.plot <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Sex", title="BySex", shape="Treatment")
+physeq1.ord.plot <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Sex", title="BySex", shape="Treatment") + stat_ellipse(level=0.4)
 plot(physeq1.ord.plot)
-physeq1.ord.treatment <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Treatment", title="ByTreatment", shape="Sex")
+physeq1.ord.treatment <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Treatment", title="ByTreatment", shape="Sex") + stat_ellipse(level=0.4)
 plot(physeq1.ord.treatment)
-physeq1.ord.plot.treatment <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Sex_Treatment", title="BySex_Treatment") ##optional parameter for any of the above plots + stat_ellipse(level=0.4)
+physeq1.ord.plot.treatment <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Sex_Treatment", title="BySex_Treatment") + stat_ellipse(level=0.4) ##optional parameter for any of the above plots + stat_ellipse(level=0.4)
 plot(physeq1.ord.plot.treatment)
 ```
 
@@ -84,7 +97,7 @@ sampledf <- data.frame(sample_data(physeq1))
 set.seed(1)
 perm.results.treatment <- adonis(physeq1.dist ~ Treatment*Sex, data=sampledf, permutations=5000)
 print(perm.results.treatment)
-
+physeq1 <- physeq
 ```
 
 ```{r capscale_ordistep}
@@ -137,7 +150,7 @@ return(sigtab)
 library(DESeq2)
 set.seed(1)
 phyloseq_object <- physeq1
-physeq_genus <- tax_glom(physeq, taxrank="Order")
+physeq_genus <- tax_glom(physeq, taxrank="Genus")
 ##This is a basic workthrough that runs DESeq2 for analysis of taxa analysis. One thing that that I should consider is filtering the available taxa to so that only taxa that are present in 50% of samples or greater. This would eliminate this issue where differences are inflated by the presence of a bunch of zeros for a particular group. I think that effect could largely be driven by the Box covariate, which is possibly suggested in the adonis results as well.
 ## A couple limitations 
 sigtab <- NULL
@@ -161,12 +174,20 @@ print(sigtab)
 ## After generating the taxa tables, see which taxa might be common between sets
 ## Get a feel for the taxa present by looking at microbes observed in Keaton's work, and what might have been observed elsewhere 
 
-
-asv_table=(otu_table(phyloseq_object1))
-sample_data_to_smash=sample_data(phyloseq_object1)
+asv_table=(otu_table(physeq))
+sample_data_to_smash=sample_data(physeq)
 taxa_table_plus_metadata <- data.frame(cbind(data.frame(asv_table), data.frame(sample_data_to_smash)))
 ##plotting_taxa <- ggplot(taxa_table_plus_metadata, aes(x=Treatment, y=ASV92)) + geom_smooth()##+ geom_jitter() 
 ##plotting_taxa
+
+```
+
+```{r filter_taxa_chunk}
+## this is an optional chunk of code to run if you want to filter taxa for only those that are reasonably abundant. In the case below taxa that show up more than three times in more than 10% of samples will be filtered
+## Run the chunks above to set to the default settings using a variety of 
+physeq1 = filter_taxa(physeq, function(x) sum(x > 3) > (0.1*length(x)), TRUE)
+phyloseq_object <- physeq1
+physeq_genus <- tax_glom(physeq, taxrank="Genus")
 
 ```
 
@@ -227,7 +248,7 @@ treatdds = phyloseq_to_deseq2(physeq_genus, ~OFCentDur1)
 ## Genus level table
 OFCentDur1_genus <- taxa_with_deseq(treatdds, physeq_genus)
 print(OFCentDur1_genus)
-
+```
 
 ```{r ASV_by_Treatment}
 ## Convert to deseq2 object using the specified covariate
@@ -244,7 +265,7 @@ print(Treatment_genus)
 asv_table=(otu_table(physeq_genus))
 sample_data_to_smash=sample_data(physeq_genus)
 taxa_table_plus_metadata <- data.frame(cbind(data.frame(asv_table), data.frame(sample_data_to_smash)))
-plotting_taxa <- ggplot(taxa_table_plus_metadata, aes(x=Treatment, y=ASV656)) + geom_jitter() + geom_smooth()
+plotting_taxa <- ggplot(taxa_table_plus_metadata, aes(x=Treatment, y=ASV656))  + geom_smooth() + geom_jitter()
 plotting_taxa
 
 
