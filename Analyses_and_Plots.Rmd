@@ -80,11 +80,11 @@ physeq1 <- physeq
 library("phyloseq")
 physeq1.ord <- ordinate(physeq1, "NMDS", "jaccard")
 sample_data(physeq1)$Treatment <- as.factor(sample_data(physeq1)$Treatment)
-physeq1.ord.plot <- plot_ordination(physeq1, physeq1.ord, type="samples", axes=c(3,3), color="Sex", title="BySex")
+physeq1.ord.plot <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Sex", title="BySex") + stat_ellipse(level=0.4)
 plot(physeq1.ord.plot)
 physeq1.ord.treatment <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Treatment", title="ByTreatment", shape="Sex")
 plot(physeq1.ord.treatment)
-physeq1.ord.plot.treatment <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Sex_Treatment", title="BySex_Treatment")##optional parameter for any of the above plots + stat_ellipse(level=0.4)
+physeq1.ord.plot.treatment <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Sex_Treatment", title="BySex_Treatment") + stat_ellipse(level=0.4)##optional parameter for any of the above plots + stat_ellipse(level=0.4)
 plot(physeq1.ord.plot.treatment)
 ```
 
@@ -151,12 +151,13 @@ return(sigtab)
 ## Covariates = Sex+Treatment+FSTTimeImmobile+NOObjpref+OFCentDur1+FCCuedFrzTone+OFTotDistDay1
 library(DESeq2)
 set.seed(1)
+physeq1<-physeq
 phyloseq_object <- physeq1
 physeq_genus <- tax_glom(physeq, taxrank="Genus")
 ##This is a basic workthrough that runs DESeq2 for analysis of taxa analysis. One thing that that I should consider is filtering the available taxa to so that only taxa that are present in 50% of samples or greater. This would eliminate this issue where differences are inflated by the presence of a bunch of zeros for a particular group. I think that effect could largely be driven by the Box covariate, which is possibly suggested in the adonis results as well.
 ## A couple limitations 
 sigtab <- NULL
-treatdds = phyloseq_to_deseq2(physeq_genus, ~OFTotDistDay1)
+treatdds = phyloseq_to_deseq2(physeq_genus, ~Treatment)
 treatdds.deseq = DESeq(treatdds)
 res = results(treatdds.deseq, cooksCutoff=FALSE)
 res = data.frame(res)
@@ -230,12 +231,6 @@ treatdds = phyloseq_to_deseq2(physeq_genus, ~NOObjpref)
 ## Genus level table
 NOObjpref_genus <- taxa_with_deseq(treatdds, physeq_genus)
 print(NOObjpref_genus)
-
-asv_table=(otu_table(phyloseq_object))
-sample_data_to_smash=sample_data(phyloseq_object)
-taxa_table_plus_metadata <- data.frame(cbind(data.frame(asv_table), data.frame(sample_data_to_smash)))
-plotting_taxa <- ggplot(taxa_table_plus_metadata, aes(x=Treatment, y=ASV2225)) + geom_point() + geom_smooth() + geom_jitter() 
-plotting_taxa
 
 ```
 
@@ -311,13 +306,79 @@ treatdds = phyloseq_to_deseq2(physeq_genus, ~FCCuedFrzTone)
 FCCuedFrzTone_genus <- taxa_with_deseq(treatdds, physeq_genus)
 print(FCCuedFrzTone_genus)
 
-asv_table=(otu_table(physeq_genus))
-sample_data_to_smash=sample_data(physeq_genus)
-taxa_table_plus_metadata <- data.frame(cbind(data.frame(asv_table), data.frame(sample_data_to_smash)))
-plotting_taxa <- ggplot(taxa_table_plus_metadata, aes(x=Treatment, y=ASV2432)) + geom_jitter() 
-plotting_taxa
+```
+
+
+
+
+```{r correl_taxa_and_covariates}
+
+testing_correlate_function = correlate_taxa(physeq_genus)
+## The function below takes a phyloseq object, extracts relevant data, then performs a correlation test using Kendall's tau if you want to use a different method for correlation analysis configure it using method in does_it_correlate
+correlate_taxa <- function(phyloseq_object){
+require("phyloseq")
+#normalize read counts
+#phyloseq_object = transform_sample_counts(phyloseq_object, function(y) y / sum(y))
+#extract otu table for creation of big df
+ASVs_for_analysis <- otu_table(phyloseq_object)
+#extract metadata
+sample_metadata <- sample_data(phyloseq_object)
+#Get a taxa table (if you need it for later analysis)
+taxa_info_table <- tax_table(phyloseq_object)
+#combine otu_table and treatment info into one df
+super_cor_df <- cbind(ASVs_for_analysis, sample_metadata)
+#save values in this one
+#colnames(place_to_store_df) <- (c("ASV", "saved p-value"))
+#loop through the super_df, test each taxa for correlation, save the p-value and ASV in place_to_store_df, and return it after analysis is finished
+for (i in 1:ncol(otu_table(phyloseq_object))){
+does_it_correlate <- cor.test(c(super_cor_df[,i]), c(super_cor_df$Treatment), method=(c("kendall")))
+place_to_store_df <- rbind(place_to_store_df, c((colnames(otu_table(phyloseq_object)[,i])), does_it_correlate[["p.value"]]))
+subsetting_vec = !is.na(place_to_store_df[,2])
+place_to_store_df = subset(place_to_store_df, subsetting_vec)
+}
+colnames(place_to_store_df) <- (c("ASV", "saved p-value"))
+adjusted_pvals <- p.adjust(as.numeric(place_to_store_df[,2]), method=c("fdr"))
+place_to_store_df$adjusted_pvals <- adjusted_pvals
+return(place_to_store_df)
+}
+
+hist(as.numeric(place_to_store_df[,2]))
+adjusted_pvals_from_corr_test = p.adjust(as.numeric(place_to_store_df[,2]), method=c("fdr"))
+hist(adjusted_pvals_from_corr_test)
+
+
+
 
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
