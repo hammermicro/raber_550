@@ -63,12 +63,14 @@ plot(physeq_enfit)
 
 ```{r nmds_different_axes}
 set.seed(1)
+physeq1 <- rarefy_even_depth(physeq1, rngseed=TRUE, verbose=FALSE)
 physeq_nmds = metaMDS(otu_table(physeq1), distance="bray", k=4, trymax=1000, data=treatment.env)
 nmds_table = scores(physeq_nmds, display="sites")
-plot(nmds_table[,1], nmds_table[,4], main="Bray-Curtis 1:3", pch=20, col=c("(treatment.env$Treatment)
-physeq1_ordination <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Treatment", title="ByTreatment", shape="Sex") + stat_ellipse(level=0.4)
-plot(physeq1.ord.treatment)
-
+plot(nmds_table[,2], nmds_table[,3], main="Bray-Curtis Beta-div", xlab="NMDS1", ylab="NMDS3", pch=20, col=c("slateblue3", "tomato3", "darkolivegreen", "coral4"))
+##This shows the ordination using different NMDS axes. These can be specified by performing metaMDS on the object otu_table and specifying k=(num of NMDS axes), then using the plot_ordination function with the phyloseq object, specifying colors and shapes based on metadata you want to visualize
+physeq1.ord.plot <- plot_ordination(physeq1, physeq_nmds, type="samples", axes=c(1,3), color="Treatment", title="ByTreatment") + stat_ellipse(level=0.95)
+print(physeq1.ord.plot)
+physeq1 <- physeq
 
 ```
 
@@ -76,13 +78,13 @@ plot(physeq1.ord.treatment)
 
 ```{r bray_by_Sex_Treatment, echo=FALSE}
 library("phyloseq")
-physeq1.ord <- ordinate(physeq1, "NMDS", "bray")
+physeq1.ord <- ordinate(physeq1, "NMDS", "jaccard")
 sample_data(physeq1)$Treatment <- as.factor(sample_data(physeq1)$Treatment)
-physeq1.ord.plot <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Sex", title="BySex", shape="Treatment") + stat_ellipse(level=0.4)
+physeq1.ord.plot <- plot_ordination(physeq1, physeq1.ord, type="samples", axes=c(3,3), color="Sex", title="BySex")
 plot(physeq1.ord.plot)
-physeq1.ord.treatment <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Treatment", title="ByTreatment", shape="Sex") + stat_ellipse(level=0.4)
+physeq1.ord.treatment <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Treatment", title="ByTreatment", shape="Sex")
 plot(physeq1.ord.treatment)
-physeq1.ord.plot.treatment <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Sex_Treatment", title="BySex_Treatment") + stat_ellipse(level=0.4) ##optional parameter for any of the above plots + stat_ellipse(level=0.4)
+physeq1.ord.plot.treatment <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Sex_Treatment", title="BySex_Treatment")##optional parameter for any of the above plots + stat_ellipse(level=0.4)
 plot(physeq1.ord.plot.treatment)
 ```
 
