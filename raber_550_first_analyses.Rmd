@@ -483,22 +483,22 @@ taxa_info_table <- tax_table(phyloseq_object)
 #combine otu_table and treatment info into one df
 super_cor_df <- cbind(ASVs_for_analysis, sample_metadata)
 #save values in this one
+place_to_store_df <- NULL
+place_to_store_df$ASV <- colnames(ASVs_for_analysis)
 #colnames(place_to_store_df) <- (c("ASV", "saved p-value"))
 #loop through the super_df, test each taxa for correlation, save the p-value and ASV in place_to_store_df, and return it after analysis is finished
-for (i in 1:ncol(otu_table(phyloseq_object))){
-does_it_correlate <- cor.test(c(super_cor_df[,i]), c(super_cor_df$Treatment), method=(c("kendall")))
-place_to_store_df <- rbind(place_to_store_df, c((colnames(otu_table(phyloseq_object)[,i])), does_it_correlate[["p.value"]]))
-subsetting_vec = !is.na(place_to_store_df[,2])
-place_to_store_df = subset(place_to_store_df, subsetting_vec)
+for (i in 1:ncol(ASVs_for_analysis)){
+does_it_correlate <- cor.test(x=(super_cor_df$NOObjpref),y=(super_cor_df[,i]), method=(c("spearman")))
+place_to_store_df$pvalue[i] <- does_it_correlate[["p.value"]]
 }
-colnames(place_to_store_df) <- (c("ASV", "saved p-value"))
 return(place_to_store_df)
 }
 
-hist(as.numeric(place_to_store_df[,2]))
-adjusted_pvals_from_corr_test = p.adjust(as.numeric(place_to_store_df[,2]), method=c("fdr"))
-hist(adjusted_pvals_from_corr_test)
 
+testing_correlate_function = correlate_taxa(physeq_genus)
+testing_correlate_function$pvalue = p.adjust(as.numeric(testing_correlate_function$pvalue), method=c("fdr"))
+testing_correlate_function = subset(testing_correlate_function, !is.na(testing_correlate_function$pvalue))
+print(testing_correlate_function)
 
 
 ##Trying some random forest classification
