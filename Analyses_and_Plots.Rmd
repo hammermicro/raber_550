@@ -32,23 +32,24 @@ taxa_names(physeq) <- paste0("ASV", seq(ntaxa(physeq)))
 physeq = subset_samples(physeq, sample_names(physeq) != "93")
 physeq = subset_samples(physeq, sample_names(physeq) != "59")
 physeq1 <- physeq
-sample_data(physeq1)$Radiated <- get_variable(physeq1, "Treatment") %in% c("25","50","200")
 ```
 
 ```{r alphadiv}
 ## While the p-value for ANOVA of alphadiv~Treatment isn't extremely low (Pr(>F)~0.13), Shannon~Treatment*Sex (Pr(>F)~0.06), Observed~Treatment (Pr(>F)~0.06) it might be useful to briefly mention this in light of Keaton's previous analysis which showed an increase in alphadiv associated with increased radiation exposure. However, this test also functions with the assumptions necessary for running ANOVA about which I am not certain.
 ## Should maybe look at mean #ofgenera observed as a function of radiation level. Considering the low count #s post-glom with phyloseq, is this going to be descriptive or meaningful
+##Covariates = Sex+Treatment+FSTTimeImmobile+NOObjpref+OFCentDur1+FCCuedFrzTone+OFTotDistDay1
 library("phyloseq")
 some_sample_data <- data.frame(sample_data(physeq1))
-resultsofstuff <- wilcox.test(alphadiv ~ Radiated, data=some_sample_data)
 sample_data(physeq1)$Alphadiv <- estimate_richness(physeq1, split=TRUE, measures=c("Shannon"))
 anova_df <- data.frame(sample_data(physeq1))
-alphadiv_lm <- lm(as.matrix(Alphadiv) ~ Treatment, data=anova_df)
+alphadiv_lm <- lm(as.matrix(Alphadiv) ~ FCCuedFrzTone, data=anova_df)
 plot(alphadiv_lm)
-aov_results <- aov(as.matrix(Alphadiv) ~ Treatment*Sex, data=anova_df)
+aov_results <- aov(as.matrix(Alphadiv) ~ Treatment, data=anova_df)
 anova_results <- anova(aov_results)
-some_plot <- boxplot((as.matrix(Alphadiv))~Treatment, data=anova_df)
+some_plot <- plot((as.matrix(Alphadiv))~Treatment, data=anova_df)
 print(anova_results)
+testing_cor_adiv <- cor.test(x=anova_df$FSTTimeImmobile, y=(as.matrix(anova_df$Alphadiv)), method=c("kendall"))
+print(testing_cor_adiv)
 ```
 
 ```{r enfit, echo=FALSE}
@@ -305,7 +306,9 @@ Treatment_Sex_genus <- taxa_with_deseq(treatdds, physeq_genus)
 print(Treatment_Sex_genus)
 ```
 ```{r commentary}
-##Alpha diversity is a metric that describes the diversity of taxa in a specific sample or set. Mean alpha diversity measures did not differ significantly between the analyze treatment groups (Treatment Pr(>F)~0.129, Treatment interaction with Sex, Pr(>F)~0.061).The compositional diversity between samples, beta-diversity, was first estimated using the Bray-Curtis dissimilarity index, and a NMDS ordination was created. From this information, an analog to step-wise AIC was used to elucidate the best model for predicting differences in beta-diversity. PERMANOVA was performed using Treatment x Sex to quantify the difference in beta diversity between samples. The results of this test suggest that the composition of the gut changes in response to Treatment interacting with Sex (p-value ~0.0006, R2~0.041). While no association was found between beta-diversity and other behavioral covariates, there were associations with some individual taxa. DESeq2 was used to analyze the association between bacterial taxa and study covariates.
+##Alpha diversity is a metric that describes the diversity of taxa in a specific sample or set. Mean alpha diversity measures did not differ significantly between the treatment groups. Of the behavioral covariates and no association was detected. However, FSTTimeImmobile times were associated with alpha diversity (alpha diversity metric "Shannon", Kendall's tau, p-value=0.03692).
+##Beta diversity is an estimate of diversity between different samples. Beta diversity was first estimated using the Bray-Curtis dissimilarity index, and a NMDS ordination was created. From this information, an analog to step-wise AIC was used to elucidate the best model for predicting differences in beta-diversity. PERMANOVA was performed using Treatment x Sex to quantify the difference in beta diversity between samples. The results of this test suggest that the composition of the gut changes in response to Treatment interacting with Sex (p-value ~0.0006, R2~0.041). No other covariates significantly associated with beta diversity.
+##There were associations between covariates of interest and taxa. DESeq2 was used to analyze the association between bacterial taxa and study covariates. Most associations were at the ASV level.
 ```
 
 
