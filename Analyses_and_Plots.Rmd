@@ -185,11 +185,15 @@ print(sigtab)
 asv_table=(otu_table(phyloseq_object))
 sample_data_to_smash=sample_data(phyloseq_object)
 taxa_table_plus_metadata_asv <- data.frame(cbind(data.frame(asv_table), data.frame(sample_data_to_smash)))
-##plotting_taxa <- ggplot(taxa_table_plus_metadata, aes(x=Treatment, y=ASV92)) + geom_smooth()##+ geom_jitter() 
-##plotting_taxa
-asv_table=(otu_table(physeq_genus))
-sample_data_to_smash=sample_data(physeq_genus)
-taxa_table_plus_metadata_genus <- data.frame(cbind(data.frame(asv_table), data.frame(sample_data_to_smash)))
+asv_table_rare <- rarefy_even_depth(otu_table(phyloseq_object))
+taxa_table_plus_metadata_asv_rare <- data.frame(cbind(data.frame(asv_table_rare), data.frame(sample_data_to_smash)))
+
+genus_table=(otu_table(physeq_genus))
+sample_data_to_smash_genus=sample_data(physeq_genus)
+taxa_table_plus_metadata_genus <- data.frame(cbind(data.frame(genus_table), data.frame(sample_data_to_smash_genus)))
+physeq_genus_rare <- rarefy_even_depth(physeq_genus)
+genus_table_rare <- otu_table(physeq_genus_rare)
+taxa_table_plus_metadata_genus_rare <- data.frame(cbind(data.frame(genus_table_rare), data.frame(sample_data_to_smash_genus)))
 
 ```
 
@@ -223,7 +227,7 @@ FSTTimeImmobile_ASVs <- taxa_with_deseq(treatdds, physeq1)
 print(FSTTimeImmobile_ASVs)
 ## DESeq2 genus level analysis using FSTTimeImmobile
 treatdds = phyloseq_to_deseq2(physeq_genus, ~FSTTimeImmobile)
-## Genus level table
+## Genus level table
 FSTTimeImmobile_genus <- taxa_with_deseq(treatdds, physeq_genus)
 print(FSTTimeImmobile_genus)
 ```
@@ -267,11 +271,11 @@ treatdds = phyloseq_to_deseq2(physeq_genus, ~Treatment)
 Treatment_genus <- taxa_with_deseq(treatdds, physeq_genus)
 print(Treatment_genus)
 ## ASV656 identified as significant using DESeq2 at the genus level, occurs more frequently and in increased abundance across samples at radiation levels under 50cGy, but its abundance and presence is markedly lower at 200cGy (p-value ~0.02)
-plotting_taxa <- ggplot(taxa_table_plus_metadata_genus, aes(x=Treatment, y=ASV656))  + geom_smooth(method="lm") + geom_jitter()
+plotting_taxa <- ggplot(taxa_table_plus_metadata_genus_rare, aes(x=Treatment, y=ASV656))  + geom_smooth(method="lm") + geom_jitter()
 plotting_taxa
 
 ## ASV429 from the Ruminococceae was identified as being significantly associated with Treatment(p-value=) and the graph of this shows high abundance for a number of samples at a low radiation level, but none at 50cGy and above.
-plotting_taxa <- ggplot(taxa_table_plus_metadata_asv, aes(x=Treatment, y=ASV429)) + geom_jitter() + geom_smooth(method="lm")
+plotting_taxa <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=Treatment, y=ASV429)) + geom_jitter() + geom_smooth(method="lm")
 plotting_taxa
 
 
@@ -292,12 +296,12 @@ print(Sex_genus)
 
 ```{r ASV_by_Treatment_interaction_Sex}
 ## Convert to deseq2 object using the specified covariate
-treatdds = phyloseq_to_deseq2(phyloseq_object, ~Treatment*Sex)
+treatdds = phyloseq_to_deseq2(phyloseq_object, ~Sex:Treatment)
 ## Generated table containing ASVs
 Treatment_Sex_ASVs <- taxa_with_deseq(treatdds, physeq1)
 print(Treatment_Sex_ASVs)
 ## DESeq2 analysis using Treatment*Sex
-treatdds = phyloseq_to_deseq2(physeq_genus, ~Treatment*Sex)
+treatdds = phyloseq_to_deseq2(physeq_genus, ~Sex:Treatment)
 ## Genus level table
 Treatment_Sex_genus <- taxa_with_deseq(treatdds, physeq_genus)
 print(Treatment_Sex_genus)
@@ -305,8 +309,9 @@ print(Treatment_Sex_genus)
 ```{r commentary}
 ##Alpha diversity is a metric that describes the diversity of taxa in a specific sample or set. Alpha diversity measures did not differ significantly between treatment groups, and no association between alpha diversity and radiation level was detected. However, FSTTimeImmobile times were associated with alpha diversity (alpha diversity metric "Shannon", Kendall's tau, p-value=0.03692).
 ##Beta diversity is an estimate of diversity between different samples. Beta diversity was first estimated using the Bray-Curtis dissimilarity index, and a NMDS ordination was created. From this information, an analog to step-wise AIC was used to elucidate the best model for predicting differences in beta-diversity. PERMANOVA was performed using Treatment x Sex to quantify the difference in beta diversity between samples. The results of this test suggest that the composition of the gut changes in response to Treatment interacting with Sex (p-value ~0.0006, R2~0.041). No other covariates significantly associated with beta diversity.
-##There were associations between covariates of interest and taxa. DESeq2 was used to analyze the association between bacterial taxa and study covariates at the genus and species (ASV) level. 
+##There were associations between covariates of interest and taxa. DESeq2 was used to analyze the association between bacterial taxa and several covariates at the genus and species (ASV) level. The abundance of some taxa associated with the level of radiation exposure as a function of host sex. This was observed for the Bacteroides and Turicibacter genera, where an increased abundance was associated with higher radiation exposure in female mice but not in male mice. An increase in the both genera has previously been observed in radiation-induced gut dysbiosis and inflammation (https://gut.bmj.com/content/67/1/97).
 ```
+
 
 
 
