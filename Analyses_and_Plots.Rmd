@@ -70,13 +70,13 @@ plot(physeq_enfit)
 
 ```{r bray_by_Sex_Treatment, echo=FALSE}
 library("phyloseq")
-physeq1.ord <- ordinate(physeq1, "NMDS", "jaccard")
+physeq1.ord <- ordinate(physeq1, "NMDS", "bray")
 sample_data(physeq1)$Treatment <- as.factor(sample_data(physeq1)$Treatment)
-physeq1.ord.plot <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Sex", title="BySex") + stat_ellipse(level=0.4)
+physeq1.ord.plot <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Sex")
 plot(physeq1.ord.plot)
-physeq1.ord.treatment <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Treatment", title="ByTreatment", shape="Sex")
+physeq1.ord.treatment <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Treatment", title="ByTreatment")
 plot(physeq1.ord.treatment)
-physeq1.ord.plot.treatment <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Sex_Treatment", title="BySex_Treatment") + stat_ellipse(level=0.95)##optional parameter for any of the above plots + stat_ellipse(level=0.4)
+physeq1.ord.plot.treatment <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Sex_Treatment", title="BySex_Treatment")##optional parameter for any of the above plots + stat_ellipse(level=0.95)
 plot(physeq1.ord.plot.treatment)
 ```
 
@@ -296,12 +296,12 @@ print(Sex_genus)
 
 ```{r ASV_by_Treatment_interaction_Sex}
 ## Convert to deseq2 object using the specified covariate
-treatdds = phyloseq_to_deseq2(phyloseq_object, ~Sex:Treatment)
+treatdds = phyloseq_to_deseq2(phyloseq_object, ~Sex*Treatment)
 ## Generated table containing ASVs
 Treatment_Sex_ASVs <- taxa_with_deseq(treatdds, physeq1)
 print(Treatment_Sex_ASVs)
 ## DESeq2 analysis using Treatment*Sex
-treatdds = phyloseq_to_deseq2(physeq_genus, ~Sex:Treatment)
+treatdds = phyloseq_to_deseq2(physeq_genus, ~Sex*Treatment)
 ## Genus level table
 Treatment_Sex_genus <- taxa_with_deseq(treatdds, physeq_genus)
 print(Treatment_Sex_genus)
