@@ -140,7 +140,9 @@ taxa_with_deseq <- function(treatdds, physeq1){
 
   #remove_nas <- is.na(res$padj)
   #sigtab <- subset(res, remove_nas)
-  ##MAke a note of sfType -poscounts and fitType = local
+  ##MAke a note of sfType -poscounts and fitType = local - This should decrease the likelihood that a single outlier drives the observation
+  ## Behavioral results are probably being driven by this,
+  ##prevalence filter 
   res2   <- subset(res, !is.na(res$padj))
   sigtab <- subset(res2, res2$padj < alpha)
   if (nrow(sigtab)>0){
