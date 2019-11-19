@@ -46,7 +46,7 @@ alphadiv_lm <- lm(as.matrix(Alphadiv) ~ FCCuedFrzTone, data=anova_df)
 plot(alphadiv_lm)
 aov_results <- aov(as.matrix(Alphadiv) ~ Treatment, data=anova_df)
 anova_results <- anova(aov_results)
-some_plot <- plot((as.matrix(Alphadiv))~Treatment, data=anova_df)
+some_plot <- plot((as.matrix(Alphadiv))~FSTTimeImmobile, data=anova_df)
 print(anova_results)
 testing_cor_adiv <- cor.test(x=anova_df$FSTTimeImmobile, y=(as.matrix(anova_df$Alphadiv)), method=c("kendall"))
 print(testing_cor_adiv)
@@ -130,23 +130,25 @@ beta_disp_tukey_result <- TukeyHSD(betadispersion, ordered=FALSE, conf.level=0.9
 
 ```{r deseq2_function}
 library("phyloseq")
-taxa_with_deseq <- function(treatdds.deseq, physeq1){ 
-sigtab <- NULL
-##treatdds = phyloseq_to_deseq2(phyloseq_object, ~"some_covariate")
-treatdds.deseq = DESeq(treatdds)
-res = results(treatdds.deseq, cooksCutoff=FALSE)
-res = data.frame(res)
-alpha = 0.1
-remove_nas <- is.na(res$adj)
-sigtab <- subset(res, remove_nas)
-res <- subset(res, !is.na(res$padj))
-sigtab <- subset(res, res$padj < alpha)
-if (nrow(sigtab)>0){
-sigtab = cbind(as(sigtab, "data.frame"), as(tax_table(physeq1)[rownames(sigtab), ], "matrix"))
-return(sigtab)
-} else {
-  return("No significant taxa were identified using the specified formula")
-}
+taxa_with_deseq <- function(treatdds, physeq1){ 
+  sigtab <- NULL
+  ##treatdds = phyloseq_to_deseq2(phyloseq_object, ~"some_covariate")
+  treatdds.deseq = DESeq(treatdds)
+  res = results(treatdds.deseq, cooksCutoff=FALSE)
+  res = data.frame(res)
+  alpha = 0.1
+
+  #remove_nas <- is.na(res$padj)
+  #sigtab <- subset(res, remove_nas)
+  ##MAke a note of sfType -poscounts and fitType = local
+  res2   <- subset(res, !is.na(res$padj))
+  sigtab <- subset(res2, res2$padj < alpha)
+  if (nrow(sigtab)>0){
+    sigtab = cbind(as(sigtab, "data.frame"), as(tax_table(physeq1)[rownames(sigtab), ], "matrix"))
+    return(sigtab)
+  } else {
+    return("No significant taxa were identified using the specified formula")
+  }
 }
 
 ```
@@ -296,16 +298,20 @@ print(Sex_genus)
 
 ```{r ASV_by_Treatment_interaction_Sex}
 ## Convert to deseq2 object using the specified covariate
-treatdds = phyloseq_to_deseq2(phyloseq_object, ~Sex*Treatment)
+treatdds = phyloseq_to_deseq2(phyloseq_object, ~Sex:Treatment)
 ## Generated table containing ASVs
 Treatment_Sex_ASVs <- taxa_with_deseq(treatdds, physeq1)
 print(Treatment_Sex_ASVs)
 ## DESeq2 analysis using Treatment*Sex
-treatdds = phyloseq_to_deseq2(physeq_genus, ~Sex*Treatment)
+treatdds = phyloseq_to_deseq2(physeq_genus, ~Sex:Treatment)
 ## Genus level table
 Treatment_Sex_genus <- taxa_with_deseq(treatdds, physeq_genus)
+
 print(Treatment_Sex_genus)
 ```
+
+
+
 ```{r commentary}
 ##Alpha diversity is a metric that describes the diversity of taxa in a specific sample or set. Alpha diversity measures did not differ significantly between treatment groups, and no association between alpha diversity and radiation level was detected. However, FSTTimeImmobile times were associated with alpha diversity (alpha diversity metric "Shannon", Kendall's tau, p-value=0.03692).
 ##Beta diversity is an estimate of diversity between different samples. Beta diversity was first estimated using the Bray-Curtis dissimilarity index, and a NMDS ordination was created. From this information, an analog to step-wise AIC was used to elucidate the best model for predicting differences in beta-diversity. PERMANOVA was performed using Treatment x Sex to quantify the difference in beta diversity between samples. The results of this test suggest that the composition of the gut changes in response to Treatment interacting with Sex (p-value ~0.0006, R2~0.041). No other covariates significantly associated with beta diversity.
