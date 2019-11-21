@@ -18,8 +18,8 @@ library("knitr")
 ```{r make_phyloseq_object, echo=FALSE}
 library("readxl")
 library("phyloseq")
-seqtab <- readRDS("C:/Users/hammera/Desktop/raber_550/data/reads_290190_seqtab_final.rds")
-seqtab.taxa <- readRDS("C:/Users/hammera/Desktop/raber_550/data/reads_290190_taxa_final.rds")
+seqtab <- readRDS("C:/Users/hammera/Desktop/raber_550/data/F_280_reads_seqtab_final.rds")
+seqtab.taxa <- readRDS("C:/Users/hammera/Desktop/raber_550/data/F_280_reads_taxa_final.rds")
 seqtab <- (seqtab)
 meta_data <- as.data.frame(read_excel("C:/Users/hammera/Desktop/raber_550/data/550_metadata_revised.xlsx"))
 rownames(seqtab) <- meta_data$RaberSID
@@ -34,7 +34,7 @@ physeq = subset_samples(physeq, sample_names(physeq) != "59")
 physeq1 <- physeq
 ```
 
-```{r alphadiv, echo=FALSe}
+```{r alphadiv, echo=FALSE}
 ## While the p-value for ANOVA of alphadiv~Treatment isn't extremely low (Pr(>F)~0.13), Shannon~Treatment*Sex (Pr(>F)~0.06), Observed~Treatment (Pr(>F)~0.06) it might be useful to briefly mention this in light of Keaton's previous analysis which showed an increase in alphadiv associated with increased radiation exposure. However, this test also functions with the assumptions necessary for running ANOVA about which I am not certain.
 ## Should maybe look at mean #ofgenera observed as a function of radiation level. Considering the low count #s post-glom with phyloseq, is this going to be descriptive or meaningful
 ##Covariates = Sex+Treatment+FSTTimeImmobile+NOObjpref+OFCentDur1+FCCuedFrzTone+OFTotDistDay1
@@ -81,6 +81,7 @@ plot(physeq1.ord.plot.treatment)
 ```
 
 ```{r nmds_different_axes, echo=FALSE}
+library(ggplot2)
 set.seed(1)
 physeq1 <- rarefy_even_depth(physeq1, rngseed=TRUE, verbose=FALSE)
 physeq_nmds = metaMDS(otu_table(physeq1), distance="bray", k=4, trymax=1000, data=treatment.env)
@@ -134,7 +135,7 @@ taxa_with_deseq <- function(treatdds, physeq1){
   sigtab <- NULL
   ##treatdds = phyloseq_to_deseq2(phyloseq_object, ~"some_covariate")
   treatdds.deseq = DESeq(treatdds, fitType = "local", sfType = "poscounts")
-  res = results(treatdds.deseq, cooksCutoff=FALSE)
+  res = results(treatdds.deseq, cooksCutoff=TRUE)
   res = data.frame(res)
   alpha = 0.1
 
@@ -154,6 +155,7 @@ taxa_with_deseq <- function(treatdds, physeq1){
 }
 
 ```
+
 
 ```{r ASV_analysis, echo=FALSE}
 ## This first step agglomerates to a chosen level, then you can use the workthrough below to continue the analysis
@@ -176,11 +178,11 @@ sigtab <- subset(res, remove_nas)
 res <- subset(res, !is.na(res$padj))
 sigtab <- subset(res, res$padj < alpha)
 if (nrow(sigtab)>0){
-sigtab = cbind(as(sigtab, "data.frame"), as(tax_table(physeq1)[rownames(sigtab), ], "matrix"))
-print(sigtab)
-} else {
-  print("No significant taxa were identified using the specified formula")
-}
+  sigtab = cbind(as(sigtab, "data.frame"), as(tax_table(physeq1)[rownames(sigtab), ], "matrix"))
+  print(sigtab)
+  } else {
+    print("No significant taxa were identified using the specified formula")
+  }
 
 ## Generate a couple of sigtab tables that reflect significant taxa according to behavioral covariates and permutations of Treatment/Sex. Does Treatment*Sex include Treatment, Sex, and Treatment*Sex taxa? perform at each level and see
 ## After generating the taxa tables, see which taxa might be common between sets
@@ -204,11 +206,13 @@ taxa_table_plus_metadata_genus_rare <- data.frame(cbind(data.frame(genus_table_r
 ```{r filter_taxa_chunk, echo=FALSE}
 ## this is an optional chunk of code to run if you want to filter taxa for only those that are reasonably abundant. In the case below taxa that show up more than three times in more than 10% of samples will be filtered
 ## Run the chunks above to set to the default settings using a variety of 
-physeq1 = filter_taxa(physeq, function(x) sum(x > 3) > (0.1*length(x)), TRUE)
+physeq1_filt = filter_taxa(physeq, function(x) sum(x > 3) > (0.1*length(x)), TRUE)
 phyloseq_object <- physeq1
 physeq_genus <- tax_glom(physeq, taxrank="Genus")
 
 ```
+
+
 
 ```{r ASV_by_OFTotDistDay1, echo=FALSE}
 ## DESeq2 analysis using the specified covariate (ASV level)
@@ -275,12 +279,12 @@ treatdds = phyloseq_to_deseq2(physeq_genus, ~Treatment)
 Treatment_genus <- taxa_with_deseq(treatdds, physeq_genus)
 print(Treatment_genus)
 ## ASV656 identified as significant using DESeq2 at the genus level, occurs more frequently and in increased abundance across samples at radiation levels under 50cGy, but its abundance and presence is markedly lower at 200cGy (p-value ~0.02)
-plotting_taxa <- ggplot(taxa_table_plus_metadata_genus_rare, aes(x=Treatment, y=ASV656))  + geom_smooth(method="lm") + geom_jitter()
-plotting_taxa
+##plotting_taxa <- ggplot(taxa_table_plus_metadata_genus_rare, aes(x=Treatment, y=ASV656))  + geom_smooth(method="lm") + geom_jitter()
+##plotting_taxa
 
 ## ASV429 from the Ruminococceae was identified as being significantly associated with Treatment(p-value=) and the graph of this shows high abundance for a number of samples at a low radiation level, but none at 50cGy and above.
-plotting_taxa <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=Treatment, y=ASV429)) + geom_jitter() + geom_smooth(method="lm")
-plotting_taxa
+##plotting_taxa <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=Treatment, y=ASV429)) + geom_jitter() + geom_smooth(method="lm")
+##plotting_taxa
 
 
 ```
@@ -318,6 +322,10 @@ print(Treatment_Sex_genus)
 ##Alpha diversity is a metric that describes the diversity of taxa in a specific sample or set. Alpha diversity measures did not differ significantly between treatment groups, and no association between alpha diversity and radiation level was detected. However, FSTTimeImmobile times were associated with alpha diversity (alpha diversity metric "Shannon", Kendall's tau, p-value=0.03692).
 ##Beta diversity is an estimate of diversity between different samples. Beta diversity was first estimated using the Bray-Curtis dissimilarity index, and a NMDS ordination was created. From this information, an analog to step-wise AIC was used to elucidate the best model for predicting differences in beta-diversity. PERMANOVA was performed using Treatment x Sex to quantify the difference in beta diversity between samples. The results of this test suggest that the composition of the gut changes in response to Treatment interacting with Sex (p-value ~0.0006, R2~0.041). No other covariates significantly associated with beta diversity.
 ##There were associations between covariates of interest and taxa. DESeq2 was used to analyze the association between bacterial taxa and several covariates at the genus and species (ASV) level. The abundance of some taxa associated with the level of radiation exposure as a function of host sex. This was observed for the Bacteroides and Turicibacter genera, where an increased abundance was associated with higher radiation exposure in female mice but not in male mice. An increase in the both genera has previously been observed in radiation-induced gut dysbiosis and inflammation (https://gut.bmj.com/content/67/1/97).
+
+
+
+## Of note, fewer taxa were shown to be significant after changing the parameters above
 ```
 
 
