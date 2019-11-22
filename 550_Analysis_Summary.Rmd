@@ -60,7 +60,7 @@ print(perm.results.treatment)
 ##The code below uses rarefied data to create a dataframe which can be used to accurately plot counts further down. It starts by creating one for ASVs
 asv_table=(otu_table(physeq2))
 sample_data_to_smash=sample_data(physeq2)
-taxa_table_plus_metadata_asv <- data.frame(cbind(data.frame(asv_table), data.frame(sample_data_to_smash)))
+taxa_table_plus_metadata_asv_rare <- data.frame(cbind(data.frame(asv_table), data.frame(sample_data_to_smash)))
 ##Now for genera
 physeq_genus <- tax_glom(physeq, "Genus")
 sample_data_to_smash_genus=sample_data(physeq_genus)
@@ -96,10 +96,9 @@ taxa_with_deseq <- function(treatdds, physeq1){
 
 ```
 
-```{r DESeq_analyses_by_covariate, include=FALSE, echo=FALSE}
+```{r DESeq_analyses_by_covariate, echo=FALSE}
 ##For the interaction of Treatment and Sex
 ## Convert to deseq2 object using the specified covariate
-sample_data(phyloseq_object)$Treatment <- as.factor(sample_data(phyloseq_object)$Treatment)
 dds_ASV_Treat_Sex = phyloseq_to_deseq2(phyloseq_object, ~Sex:Treatment)
 ## Generated table containing ASVs
 Treatment_Sex_ASVs <- taxa_with_deseq(dds_ASV_Treat_Sex, phyloseq_object)
