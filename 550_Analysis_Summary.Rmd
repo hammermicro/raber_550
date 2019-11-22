@@ -76,7 +76,7 @@ library("phyloseq")
 taxa_with_deseq <- function(treatdds, physeq1){ 
   sigtab <- NULL
   treatdds.deseq = DESeq(treatdds, fitType = "local", sfType = "poscounts")
-  res = results(treatdds.deseq, cooksCutoff=TRUE)
+  res = results(treatdds.deseq, cooksCutoff=FALSE)
   res = data.frame(res)
   alpha = 0.1
   #remove_nas <- is.na(res$padj)
@@ -129,7 +129,8 @@ plot(physeq2.ord.treatment)
 ## There were associations between covariates of interest and taxa. DESeq2 was used to analyze the association between bacterial taxa and several covariates at the genus and species (ASV) level. The abundance of some taxa associated with the level of radiation exposure as a function of host sex. This was observed for the Bacteroides and Turicibacter genera, where an increased abundance was associated with higher radiation exposure in female mice but not in male mice. An increase in the both genera has previously been observed in radiation-induced gut dysbiosis and inflammation (https://gut.bmj.com/content/67/1/97).
 print(Treatment_Sex_ASVs)
 print(Treatment_Sex_genus)
-
+plotting_taxa <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=Treatment, y=ASV231), color=Sex) + geom_point() + geom_smooth(method="auto") + facet_grid(rows=vars(Sex))
+plotting_taxa
 
 
 ```
