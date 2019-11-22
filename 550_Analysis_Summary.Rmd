@@ -19,15 +19,15 @@ library("phyloseq")
 ##All of the main business goes on here. There's information to create a phyloseq object, calculate alpha diversity and measure the association with covariates, quantify beta diversity and create ordinations, and use DESeq2 for analysis of taxa. For questions about anything that goes on here, feel free to ask.
 
 ##Reads in the ASV table, the taxa table, and the sample metadata
-seqtab <- readRDS("C:/Users/hammera/Desktop/raber_550/data/F_280_reads_seqtab_final.rds")
-seqtab.taxa <- readRDS("C:/Users/hammera/Desktop/raber_550/data/F_280_reads_taxa_final.rds")
+seqtab <- readRDS("C:/Users/hammera/Desktop/raber_550/data/reads_290190_seqtab_final.rds")
+seqtab_taxa <- readRDS("C:/Users/hammera/Desktop/raber_550/data/reads_290190_taxa_final.rds")
 seqtab <- (seqtab)
 meta_data <- as.data.frame(read_excel("C:/Users/hammera/Desktop/raber_550/data/550_metadata_revised.xlsx"))
 rownames(seqtab) <- meta_data$RaberSID
 ##Sets to values that can be used by phyloseq
 samples = sample_data(meta_data)
 ASV = otu_table(seqtab, taxa_are_rows = FALSE)
-TAX = tax_table(seqtab.taxa)
+TAX = tax_table(seqtab_taxa)
 sample_names(samples) <- sample_names(ASV)
 ##Makes the phyloseq object and then subsets a couple of outlier samples
 physeq = phyloseq(ASV, TAX, samples)
@@ -62,7 +62,7 @@ asv_table=(otu_table(physeq2))
 sample_data_to_smash=sample_data(physeq2)
 taxa_table_plus_metadata_asv <- data.frame(cbind(data.frame(asv_table), data.frame(sample_data_to_smash)))
 ##Now for genera
-physeq_genus <- tax_glom(physeq)
+physeq_genus <- tax_glom(physeq, "Genus")
 sample_data_to_smash_genus=sample_data(physeq_genus)
 set.seed(1)
 physeq_genus_rare <- rarefy_even_depth(physeq_genus)
@@ -75,9 +75,8 @@ taxa_table_plus_metadata_genus_rare <- data.frame(cbind(data.frame(genus_table_r
 library("phyloseq")
 taxa_with_deseq <- function(treatdds, physeq1){ 
   sigtab <- NULL
-  ##treatdds = phyloseq_to_deseq2(phyloseq_object, ~"some_covariate")
   treatdds.deseq = DESeq(treatdds, fitType = "local", sfType = "poscounts")
-  res = results(treatdds.deseq, cooksCutoff=FALSE)
+  res = results(treatdds.deseq, cooksCutoff=TRUE)
   res = data.frame(res)
   alpha = 0.1
   #remove_nas <- is.na(res$padj)
@@ -100,9 +99,10 @@ taxa_with_deseq <- function(treatdds, physeq1){
 ```{r DESeq_analyses_by_covariate, include=FALSE, echo=FALSE}
 ##For the interaction of Treatment and Sex
 ## Convert to deseq2 object using the specified covariate
+sample_data(phyloseq_object)$Treatment <- as.factor(sample_data(phyloseq_object)$Treatment)
 dds_ASV_Treat_Sex = phyloseq_to_deseq2(phyloseq_object, ~Sex:Treatment)
 ## Generated table containing ASVs
-Treatment_Sex_ASVs <- taxa_with_deseq(dds_ASV_Treat_Sex, physeq1)
+Treatment_Sex_ASVs <- taxa_with_deseq(dds_ASV_Treat_Sex, phyloseq_object)
 print(Treatment_Sex_ASVs)
 ## DESeq2 analysis using Treatment*Sex
 dds_genus_Treat_Sex = phyloseq_to_deseq2(physeq_genus, ~Sex:Treatment)
