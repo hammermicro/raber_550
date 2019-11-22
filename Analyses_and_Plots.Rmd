@@ -207,7 +207,7 @@ taxa_table_plus_metadata_genus_rare <- data.frame(cbind(data.frame(genus_table_r
 ## this is an optional chunk of code to run if you want to filter taxa for only those that are reasonably abundant. In the case below taxa that show up more than three times in more than 10% of samples will be filtered
 ## Run the chunks above to set to the default settings using a variety of 
 physeq1_filt = filter_taxa(physeq, function(x) sum(x > 3) > (0.1*length(x)), TRUE)
-phyloseq_object <- physeq1
+phyloseq_object <- physeq1_filt
 physeq_genus <- tax_glom(physeq, taxrank="Genus")
 
 ```
@@ -284,6 +284,9 @@ print(Treatment_genus)
 
 ## ASV429 from the Ruminococceae was identified as being significantly associated with Treatment(p-value=) and the graph of this shows high abundance for a number of samples at a low radiation level, but none at 50cGy and above.
 ##plotting_taxa <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=Treatment, y=ASV429)) + geom_jitter() + geom_smooth(method="lm")
+##plotting_taxa
+
+##plotting_taxa <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=Sex, y=ASV6)) + geom_boxplot() + facet_grid(cols=vars(Treatment), as.table=TRUE)
 ##plotting_taxa
 
 
