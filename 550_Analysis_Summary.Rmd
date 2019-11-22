@@ -1,0 +1,138 @@
+---
+title: "Summary"
+author: "Austin Hammer"
+date: "11/18/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r create_physeq_object, include=FALSE}
+library("ggplot2")
+library("dplyr")
+library("vegan")
+library("DESeq2")
+library("knitr")
+library("phyloseq")
+##All of the main business goes on here. There's information to create a phyloseq object, calculate alpha diversity and measure the association with covariates, quantify beta diversity and create ordinations, and use DESeq2 for analysis of taxa. For questions about anything that goes on here, feel free to ask.
+
+##Reads in the ASV table, the taxa table, and the sample metadata
+seqtab <- readRDS("C:/Users/hammera/Desktop/raber_550/data/F_280_reads_seqtab_final.rds")
+seqtab.taxa <- readRDS("C:/Users/hammera/Desktop/raber_550/data/F_280_reads_taxa_final.rds")
+seqtab <- (seqtab)
+meta_data <- as.data.frame(read_excel("C:/Users/hammera/Desktop/raber_550/data/550_metadata_revised.xlsx"))
+rownames(seqtab) <- meta_data$RaberSID
+##Sets to values that can be used by phyloseq
+samples = sample_data(meta_data)
+ASV = otu_table(seqtab, taxa_are_rows = FALSE)
+TAX = tax_table(seqtab.taxa)
+sample_names(samples) <- sample_names(ASV)
+##Makes the phyloseq object and then subsets a couple of outlier samples
+physeq = phyloseq(ASV, TAX, samples)
+taxa_names(physeq) <- paste0("ASV", seq(ntaxa(physeq)))
+physeq = subset_samples(physeq, sample_names(physeq) != "93")
+physeq = subset_samples(physeq, sample_names(physeq) != "59")
+physeq1 <- physeq
+phyloseq_object <- physeq
+##This section allows you to look at how corvariates appear in ordination space (specifically using the envfit function after plotting the original ordinations)
+treatment.env <- data.frame(sample_data(physeq1))
+physeq1.rda <- rda(otu_table(physeq1)~Sex+Treatment+FSTTimeImmobile+NOObjpref+OFCentDur1+FCCuedFrzTone+OFTotDistDay1, data=treatment.env)
+physeq1.enfit <- envfit(physeq1.rda~Sex+Treatment+FSTTimeImmobile+NOObjpref+OFCentDur1+FCCuedFrzTone+OFTotDistDay1, data=(treatment.env), perm=5000)
+physeq_ordination <- decorana(data.frame(otu_table(physeq1)))
+physeq_enfit <- envfit(physeq_ordination~Treatment*Sex+FSTTimeImmobile+NOObjpref+OFCentDur1+FCCuedFrzTone+OFTotDistDay1, data=treatment.env, perm=1000)
+##Using metaMDS (the default of phyloseq's ordinate function) this creates an NMDS ordination using the bray-curtis dissimilarity index. Treatment is set to a factor in the physeq2 variable to help with plotting, but it remains a numeric in the original. Reads are normalized before the ordination is plotted, although, if jaccard is used do not use this step. As a brief note, for the data in question, Jaccard shows the sex difference in a much more stark fashion.
+set.seed(1)
+physeq2 <- rarefy_even_depth(physeq1)
+physeq2.ord <- ordinate(physeq2, "NMDS", "bray", trymax=50, k=3)
+sample_data(physeq2)$Treatment <- as.factor(sample_data(physeq2)$Treatment)
+##Feel free to play with the axes a little bit here to look at axes 1,3 or 2,3
+physeq2.ord.plot <- plot_ordination(physeq2, physeq2.ord, type="samples", axes=c(1,2), color="Sex", title="BySex")
+##The female points (pink) are quite dispersed, and our analyses show that there is a particularly high level of dispersion among the females irradiated at 50cGy.
+physeq2.ord.treatment <- plot_ordination(physeq2, physeq2.ord, type="samples", axes=c(1,2), color="Treatment", title="ByTreatment")##optional parameter for adding an ellipse to any of the above plots + stat_ellipse(level=0.95)
+##This next section will perform adonis using a covariate of choice on the ordination. The results of Treatment*Sex show a strong association (p-value~0.0004)
+physeq2.dist <- vegdist(otu_table(physeq2), method="bray")
+sampledf <- data.frame(sample_data(physeq2))
+set.seed(1)
+perm.results.treatment <- adonis(physeq2.dist ~ Treatment*Sex, data=sampledf, permutations=5000)
+print(perm.results.treatment)
+##The code below uses rarefied data to create a dataframe which can be used to accurately plot counts further down. It starts by creating one for ASVs
+asv_table=(otu_table(physeq2))
+sample_data_to_smash=sample_data(physeq2)
+taxa_table_plus_metadata_asv <- data.frame(cbind(data.frame(asv_table), data.frame(sample_data_to_smash)))
+##Now for genera
+physeq_genus <- tax_glom(physeq)
+sample_data_to_smash_genus=sample_data(physeq_genus)
+set.seed(1)
+physeq_genus_rare <- rarefy_even_depth(physeq_genus)
+genus_table_rare <- otu_table(physeq_genus_rare)
+taxa_table_plus_metadata_genus_rare <- data.frame(cbind(data.frame(genus_table_rare), data.frame(sample_data_to_smash_genus)))
+##From analyses and plots (Rmd), you can optionally include a function to filter for only the taxa that you're interested in but I won't list it here.
+```
+
+```{r deseq2_function, echo=FALSE, include=FALSE}
+library("phyloseq")
+taxa_with_deseq <- function(treatdds, physeq1){ 
+  sigtab <- NULL
+  ##treatdds = phyloseq_to_deseq2(phyloseq_object, ~"some_covariate")
+  treatdds.deseq = DESeq(treatdds, fitType = "local", sfType = "poscounts")
+  res = results(treatdds.deseq, cooksCutoff=FALSE)
+  res = data.frame(res)
+  alpha = 0.1
+  #remove_nas <- is.na(res$padj)
+  #sigtab <- subset(res, remove_nas)
+  ##Make a note of sfType -poscounts and fitType = local - This should decrease the likelihood that a single outlier drives the observation
+  ## Behavioral results are probably being driven by this,
+  ##prevalence filter 
+  res2   <- subset(res, !is.na(res$padj))
+  sigtab <- subset(res2, res2$padj < alpha)
+  if (nrow(sigtab)>0){
+    sigtab = cbind(as(sigtab, "data.frame"), as(tax_table(physeq1)[rownames(sigtab), ], "matrix"))
+    return(sigtab)
+  } else {
+    return("No significant taxa were identified using the specified formula")
+  }
+}
+
+```
+
+```{r DESeq_analyses_by_covariate, include=FALSE, echo=FALSE}
+##For the interaction of Treatment and Sex
+## Convert to deseq2 object using the specified covariate
+dds_ASV_Treat_Sex = phyloseq_to_deseq2(phyloseq_object, ~Sex:Treatment)
+## Generated table containing ASVs
+Treatment_Sex_ASVs <- taxa_with_deseq(dds_ASV_Treat_Sex, physeq1)
+print(Treatment_Sex_ASVs)
+## DESeq2 analysis using Treatment*Sex
+dds_genus_Treat_Sex = phyloseq_to_deseq2(physeq_genus, ~Sex:Treatment)
+## Genus level table
+Treatment_Sex_genus <- taxa_with_deseq(dds_genus_Treat_Sex, physeq_genus)
+print(Treatment_Sex_genus)
+```
+
+```{r alpha_diversity, echo=TRUE}
+##Alpha diversity is a metric that describes the diversity of taxa in a specific sample or set. Alpha diversity measures did not differ significantly between treatment groups, and no association between alpha diversity and radiation level was detected. However, FSTTimeImmobile times were associated with alpha diversity (alpha diversity metric "Shannon", Kendall's tau, p-value=0.03692).
+```
+
+```{r Ordination_Sex_Treatment, echo=TRUE}
+##Beta diversity describes the diversity between different samples or sets of samples. Beta diversity was first estimated using the Bray-Curtis dissimilarity index, and a NMDS ordination was created. From this information, an analog to step-wise AIC was used to elucidate the best model for predicting differences in beta-diversity. PERMANOVA was performed using Treatment x Sex to quantify the difference in beta diversity between samples. The results of this test suggest that the composition of the gut changes in response to Treatment interacting with Sex (p-value ~0.0006, R2~0.041). No other covariates significantly associated with beta diversity. 
+
+##The first figure shows an ordination of between sample diversity according to Sex. The second figure shows the beta diversity ordination with the points colored according to Treatment radiation exposure.
+plot(physeq2.ord.plot)
+plot(physeq2.ord.treatment)
+
+
+```
+
+
+```{r taxa, echo=TRUE}
+## There were associations between covariates of interest and taxa. DESeq2 was used to analyze the association between bacterial taxa and several covariates at the genus and species (ASV) level. The abundance of some taxa associated with the level of radiation exposure as a function of host sex. This was observed for the Bacteroides and Turicibacter genera, where an increased abundance was associated with higher radiation exposure in female mice but not in male mice. An increase in the both genera has previously been observed in radiation-induced gut dysbiosis and inflammation (https://gut.bmj.com/content/67/1/97).
+print(Treatment_Sex_ASVs)
+print(Treatment_Sex_genus)
+
+
+
+```
+
+
