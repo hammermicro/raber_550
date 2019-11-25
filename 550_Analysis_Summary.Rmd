@@ -34,6 +34,7 @@ physeq = phyloseq(ASV, TAX, samples)
 taxa_names(physeq) <- paste0("ASV", seq(ntaxa(physeq)))
 physeq = subset_samples(physeq, sample_names(physeq) != ("93"))
 physeq = subset_samples(physeq, sample_names(physeq) != "59")
+physeq = subset_samples(physeq, sample_names(physeq) != "4")
 physeq1 <- physeq
 phyloseq_object <- physeq
 ##This section allows you to look at how corvariates appear in ordination space (specifically using the envfit function after plotting the original ordinations)
@@ -55,7 +56,7 @@ physeq2.ord.treatment <- plot_ordination(physeq2, physeq2.ord, type="samples", a
 physeq2.dist <- vegdist(otu_table(physeq2), method="bray")
 sampledf <- data.frame(sample_data(physeq2))
 set.seed(1)
-perm.results.treatment <- adonis(physeq2.dist ~ Sex_Treatment, data=sampledf, permutations=5000)
+perm.results.treatment <- adonis(physeq2.dist ~PALatencyDiff, data=sampledf, permutations=5000)
 print(perm.results.treatment)
 ##The code below uses rarefied data to create a dataframe which can be used to accurately plot counts further down. It starts by creating one for ASVs
 asv_table=(otu_table(physeq2))
@@ -98,15 +99,16 @@ taxa_with_deseq <- function(treatdds, physeq1){
 
 ```{r ASV_by_Treatment, echo=FALSE}
 ## Convert to deseq2 object using the specified covariate
-treatdds = phyloseq_to_deseq2(phyloseq_object, ~Treatment)
+treatdds = phyloseq_to_deseq2(phyloseq_object, ~PALatCross)
 ## Generated table containing ASVs
 Treatment_ASVs <- taxa_with_deseq(treatdds, physeq1)
 print(Treatment_ASVs)
 ## DESeq2 analysis using Treatment
-treatdds = phyloseq_to_deseq2(physeq_genus, ~Treatment)
+treatdds = phyloseq_to_deseq2(physeq_genus, ~PALatCross)
 ## Genus level table
 Treatment_genus <- taxa_with_deseq(treatdds, physeq_genus)
 print(Treatment_genus)
+
 ```
 
 
@@ -157,6 +159,7 @@ plotting_ASV377 <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=(Treatment), 
 plotting_ASV377
 plotting_ASV411 <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=(Treatment), y=ASV411)) + geom_jitter() + geom_smooth(method="auto")
 plotting_ASV411
+##Note to Tom, PALatCross shows a somewhat large number of taxa where the fold change is associated with scores. That said, many of them are low abundance, so plot a few out and see what happens.
 ```
 
 
