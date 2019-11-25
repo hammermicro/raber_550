@@ -41,14 +41,11 @@ physeq1 <- physeq
 library("phyloseq")
 some_sample_data <- data.frame(sample_data(physeq1))
 sample_data(physeq1)$Alphadiv <- estimate_richness(physeq1, split=TRUE, measures=c("Shannon"))
-anova_df <- data.frame(sample_data(physeq1))
-alphadiv_lm <- lm(as.matrix(Alphadiv) ~ FCCuedFrzTone, data=anova_df)
-plot(alphadiv_lm)
-aov_results <- aov(as.matrix(Alphadiv) ~ Treatment, data=anova_df)
+corr_df <- data.frame(sample_data(physeq1))
+aov_results <- aov(as.matrix(Alphadiv) ~ Treatment, data=corr_df)
 anova_results <- anova(aov_results)
-some_plot <- plot((as.matrix(Alphadiv))~FSTTimeImmobile, data=anova_df)
-print(anova_results)
-testing_cor_adiv <- cor.test(x=anova_df$FSTTimeImmobile, y=(as.matrix(anova_df$Alphadiv)), method=c("kendall"))
+some_plot <- plot((as.matrix(Alphadiv))~FSTTimeImmobile, data=corr_df)
+testing_cor_adiv <- cor.test(x=corr_df$FSTTimeImmobile, y=(as.matrix(corr_df$Alphadiv)), method=c("kendall"))
 print(testing_cor_adiv)
 ```
 
@@ -110,7 +107,7 @@ physeq1 <- physeq
 
 ```{r capscale_ordistep, echo=FALSE}
 ## We ran through possible permutations and options for model selection using AIC in ordistep after building a model in capscale. Results are available via mod. The best model found after running through covariate permutations was Treatment*Sex.
-sampledf <- data.frame(sample_data(physeq2))
+sampledf <- data.frame(sample_data(physeq))
 physeq1.capsca <- capscale(physeq.dist ~ Treatment*Sex, sampledf, dist="bray")
 set.seed(1)
 mod <- ordistep(physeq1.capsca, perm.max = 5000, trace = T, direction = "both")
