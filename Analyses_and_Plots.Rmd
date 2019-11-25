@@ -285,7 +285,8 @@ print(Treatment_genus)
 
 ##plotting_taxa <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=Sex, y=ASV6)) + geom_boxplot() + facet_grid(cols=vars(Treatment), as.table=TRUE)
 ##plotting_taxa
-
+##plotting_taxa <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=Treatment, y=ASV231)) + geom_point() + geom_smooth(method="auto") + facet_grid(rows=vars(Sex))
+##plotting_taxa
 
 ```
 
