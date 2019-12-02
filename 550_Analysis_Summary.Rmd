@@ -16,6 +16,8 @@ library("vegan")
 library("DESeq2")
 library("knitr")
 library("phyloseq")
+library("readxl")
+library("OneR")
 ##All of the main business goes on here. There's information to create a phyloseq object, calculate alpha diversity and measure the association with covariates, quantify beta diversity and create ordinations, and use DESeq2 for analysis of taxa. For questions about anything that goes on here, feel free to ask.
 
 ##Reads in the ASV table, the taxa table, and the sample metadata
@@ -35,6 +37,15 @@ taxa_names(physeq) <- paste0("ASV", seq(ntaxa(physeq)))
 physeq = subset_samples(physeq, sample_names(physeq) != ("93"))
 physeq = subset_samples(physeq, sample_names(physeq) != "59")
 physeq = subset_samples(physeq, sample_names(physeq) != "4")
+sample_data(physeq)$Treatment <- as.factor(sample_data(physeq)$Treatment)
+##Binning covariates that contain continuous covariates into quartiles for DESeq2 analysis downstream. This is recommended by DESeq2's author, for more information read the vignette
+sample_data(physeq)$FSTTimeImmobile_binned <- bin(sample_data(physeq)$FSTTimeImmobile, nbins=4, labels=c("first", "second", "third", "fourth"), method="content")
+sample_data(physeq)$NOObjpref_binned <- bin(sample_data(physeq)$NOObjpref, nbins=4, labels=c("first", "second", "third", "fourth"), method="content")
+sample_data(physeq)$OFCentDur1_binned <- bin(sample_data(physeq)$OFCentDur1, nbins=4, labels=c("first", "second", "third", "fourth"), method="content")
+sample_data(physeq)$FCCuedFrzTone_binned <- bin(sample_data(physeq)$FCCuedFrzTone, nbins=4, labels=c("first", "second", "third", "fourth"), method="content")
+sample_data(physeq)$OFTotDistDay1_binned <- bin(sample_data(physeq)$OFTotDistDay1, nbins=4, labels=c("first", "second", "third", "fourth"), method="content")
+sample_data(physeq)$PALatencyDiff_binned <- bin(sample_data(physeq)$PALatencyDiff, nbins=4, labels=c("first", "second", "third", "fourth"), method="content")
+##Setting a couple of variables equal to physeq. Vars will be modified and updated later on
 physeq1 <- physeq
 phyloseq_object <- physeq
 ##This section allows you to look at how corvariates appear in ordination space (specifically using the envfit function after plotting the original ordinations)
@@ -76,7 +87,7 @@ taxa_table_plus_metadata_genus_rare <- data.frame(cbind(data.frame(genus_table_r
 library("phyloseq")
 taxa_with_deseq <- function(treatdds, physeq1){ 
   sigtab <- NULL
-  treatdds.deseq = DESeq(treatdds, fitType = "local", sfType = "poscounts")
+  treatdds.deseq = DESeq(treatdds, fitType = "parametric", sfType = "poscounts")
   res = results(treatdds.deseq, cooksCutoff=FALSE)
   res = data.frame(res)
   alpha = 0.1
@@ -99,12 +110,12 @@ taxa_with_deseq <- function(treatdds, physeq1){
 
 ```{r ASV_by_Treatment, echo=FALSE}
 ## Convert to deseq2 object using the specified covariate
-treatdds = phyloseq_to_deseq2(phyloseq_object, ~PALatCross)
+treatdds = phyloseq_to_deseq2(phyloseq_object, ~Treatment)
 ## Generated table containing ASVs
 Treatment_ASVs <- taxa_with_deseq(treatdds, physeq1)
 print(Treatment_ASVs)
 ## DESeq2 analysis using Treatment
-treatdds = phyloseq_to_deseq2(physeq_genus, ~PALatCross)
+treatdds = phyloseq_to_deseq2(physeq_genus, ~Treatment)
 ## Genus level table
 Treatment_genus <- taxa_with_deseq(treatdds, physeq_genus)
 print(Treatment_genus)
@@ -133,7 +144,7 @@ print(Treatment_Sex_genus)
 ```
 
 ```{r Ordination_Sex_Treatment, echo=TRUE}
-##Beta diversity describes the diversity between different samples or sets of samples. Beta diversity was first estimated using the Bray-Curtis dissimilarity index, and a NMDS ordination was created. From this information, an analog to step-wise AIC was used to elucidate the best model for predicting differences in beta-diversity. PERMANOVA was performed using Treatment x Sex to quantify the difference in beta diversity between samples. The results of this test suggest that the composition of the gut changes in response to Treatment interacting with Sex (p-value ~0.0006, R2~0.041). No other covariates significantly associated with beta diversity. 
+##Beta diversity describes the diversity between different samples or sets of samples. Beta diversity was first estimated using the Bray-Curtis dissimilarity index, and a NMDS ordination was created. From this information, an analog to step-wise AIC was used to elucidate the best model for predicting differences in beta-diversity. PERMANOVA was performed using Treatment interacting with Sex to quantify the difference in beta diversity between samples. The results of this test suggest that the composition of the gut changes in response to Treatment interacting with Sex (p-value ~0.0006, R2~0.041). No other covariates significantly associated with beta diversity. 
 
 ##The first figure shows an ordination of between sample diversity according to Sex. The second figure shows the beta diversity ordination with the points colored according to Treatment radiation exposure.
 plot(physeq2.ord.plot)
