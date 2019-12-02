@@ -119,7 +119,7 @@ physeq1 <- physeq
 ```{r capscale_ordistep, echo=FALSE}
 ## We ran through possible permutations and options for model selection using AIC in ordistep after building a model in capscale. Results are available via mod. The best model found after running through covariate permutations was Treatment*Sex.
 sampledf <- data.frame(sample_data(physeq))
-physeq1.capsca <- capscale(physeq.dist ~ Treatment*Sex, sampledf, dist="bray")
+physeq1.capsca <- capscale(physeq1.dist ~ Treatment*Sex, sampledf, dist="bray")
 set.seed(1)
 mod <- ordistep(physeq1.capsca, perm.max = 5000, trace = T, direction = "both")
 print(mod)
@@ -313,12 +313,12 @@ print(Sex_genus)
 
 ```{r ASV_by_Treatment_interaction_Sex, echo=FALSE}
 ## Convert to deseq2 object using the specified covariate
-treatdds = phyloseq_to_deseq2(phyloseq_object, ~Sex:Treatment)
+treatdds = phyloseq_to_deseq2(phyloseq_object, ~Sex*Treatment)
 ## Generated table containing ASVs
 Treatment_Sex_ASVs <- taxa_with_deseq(treatdds, physeq1)
 print(Treatment_Sex_ASVs)
 ## DESeq2 analysis using Treatment*Sex
-treatdds = phyloseq_to_deseq2(physeq_genus, ~Sex:Treatment)
+treatdds = phyloseq_to_deseq2(physeq_genus, ~Sex*Treatment)
 ## Genus level table
 Treatment_Sex_genus <- taxa_with_deseq(treatdds, physeq_genus)
 
