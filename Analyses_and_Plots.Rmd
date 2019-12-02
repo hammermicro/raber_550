@@ -8,12 +8,6 @@ output: pdf_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-library("ggplot2")
-library("dplyr")
-library("vegan")
-library("DESeq2")
-library("knitr")
-
 
 ```{r make_phyloseq_object, echo=FALSE}
 library("readxl")
