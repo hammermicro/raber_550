@@ -37,7 +37,6 @@ taxa_names(physeq) <- paste0("ASV", seq(ntaxa(physeq)))
 physeq = subset_samples(physeq, sample_names(physeq) != ("93"))
 physeq = subset_samples(physeq, sample_names(physeq) != "59")
 physeq = subset_samples(physeq, sample_names(physeq) != "4")
-sample_data(physeq)$Treatment <- as.factor(sample_data(physeq)$Treatment)
 ##Binning covariates that contain continuous covariates into quartiles for DESeq2 analysis downstream. This is recommended by DESeq2's author, for more information read the vignette
 sample_data(physeq)$FSTTimeImmobile_binned <- bin(sample_data(physeq)$FSTTimeImmobile, nbins=4, labels=c("first", "second", "third", "fourth"), method="content")
 sample_data(physeq)$NOObjpref_binned <- bin(sample_data(physeq)$NOObjpref, nbins=4, labels=c("first", "second", "third", "fourth"), method="content")
@@ -171,5 +170,16 @@ plotting_ASV411 <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=(Treatment), 
 plotting_ASV411
 ##Note to Tom, PALatCross shows a somewhat large number of taxa where the fold change is associated with scores. That said, many of them are low abundance, so plot a few out and see what happens.
 ```
+
+
+
+
+
+
+
+
+
+
+
 
 

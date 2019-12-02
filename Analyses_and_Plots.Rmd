@@ -18,6 +18,12 @@ library("knitr")
 ```{r make_phyloseq_object, echo=FALSE}
 library("readxl")
 library("phyloseq")
+library("ggplot2")
+library("dplyr")
+library("vegan")
+library("DESeq2")
+library("knitr")
+library("OneR")
 seqtab <- readRDS("C:/Users/hammera/Desktop/raber_550/data/F_280_reads_seqtab_final.rds")
 seqtab.taxa <- readRDS("C:/Users/hammera/Desktop/raber_550/data/F_280_reads_taxa_final.rds")
 seqtab <- (seqtab)
@@ -27,11 +33,24 @@ samples = sample_data(meta_data)
 ASV = otu_table(seqtab, taxa_are_rows = FALSE)
 TAX = tax_table(seqtab.taxa)
 sample_names(samples) <- sample_names(ASV)
+##Makes the phyloseq object and then subsets a couple of outlier samples
 physeq = phyloseq(ASV, TAX, samples)
 taxa_names(physeq) <- paste0("ASV", seq(ntaxa(physeq)))
-physeq = subset_samples(physeq, sample_names(physeq) != "93")
+physeq = subset_samples(physeq, sample_names(physeq) != ("93"))
 physeq = subset_samples(physeq, sample_names(physeq) != "59")
+physeq = subset_samples(physeq, sample_names(physeq) != "4") ## This sample is only subsetted because it is missing some covariate information
+##Binning covariates that contain continuous covariates into quartiles for DESeq2 analysis downstream. This is recommended by DESeq2's author, for more information read the vignette
+sample_data(physeq)$FSTTimeImmobile_binned <- bin(sample_data(physeq)$FSTTimeImmobile, nbins=4, labels=c("first", "second", "third", "fourth"), method="content")
+sample_data(physeq)$NOObjpref_binned <- bin(sample_data(physeq)$NOObjpref, nbins=4, labels=c("first", "second", "third", "fourth"), method="content")
+sample_data(physeq)$OFCentDur1_binned <- bin(sample_data(physeq)$OFCentDur1, nbins=4, labels=c("first", "second", "third", "fourth"), method="content")
+sample_data(physeq)$FCCuedFrzTone_binned <- bin(sample_data(physeq)$FCCuedFrzTone, nbins=4, labels=c("first", "second", "third", "fourth"), method="content")
+sample_data(physeq)$OFTotDistDay1_binned <- bin(sample_data(physeq)$OFTotDistDay1, nbins=4, labels=c("first", "second", "third", "fourth"), method="content")
+sample_data(physeq)$PALatencyDiff_binned <- bin(sample_data(physeq)$PALatencyDiff, nbins=4, labels=c("first", "second", "third", "fourth"), method="content")
+sample_data(physeq)$PALatCross_binned <- bin(sample_data(physeq)$PALatCross, nbins=4, labels=c("first", "second", "third", "fourth"), method="content")
+sample_data(physeq)$Treatment <- factor(sample_data(physeq)$Treatment)
+##Setting a couple of variables equal to physeq. Vars will be modified and updated later on
 physeq1 <- physeq
+phyloseq_object <- physeq
 ```
 
 ```{r alphadiv, echo=FALSE}
@@ -62,8 +81,6 @@ plot(physeq_ordination)
 plot(physeq_enfit)
 #plot(physeq1.enfit)
 ```
-
-
 
 ```{r bray_by_Sex_Treatment, echo=FALSE}
 library("phyloseq")
@@ -153,7 +170,6 @@ taxa_with_deseq <- function(treatdds, physeq1){
 
 ```
 
-
 ```{r ASV_analysis, echo=FALSE}
 ## This first step agglomerates to a chosen level, then you can use the workthrough below to continue the analysis
 ## Covariates = Sex+Treatment+FSTTimeImmobile+NOObjpref+OFCentDur1+FCCuedFrzTone+OFTotDistDay1
@@ -208,8 +224,6 @@ phyloseq_object <- physeq1_filt
 physeq_genus <- tax_glom(physeq, taxrank="Genus")
 
 ```
-
-
 
 ```{r ASV_by_OFTotDistDay1, echo=FALSE}
 ## DESeq2 analysis using the specified covariate (ASV level)
@@ -317,7 +331,89 @@ Treatment_Sex_genus <- taxa_with_deseq(treatdds, physeq_genus)
 print(Treatment_Sex_genus)
 ```
 
+```{r ASV_by_FSTTimeImmobile_binned, echo=FALSE}
+## Convert to deseq2 object using the specified covariate
+treatdds = phyloseq_to_deseq2(phyloseq_object, ~FSTTimeImmobile_binned)
+## Generated table containing ASVs
+FSTTimeImmobile_binned_ASVs <- taxa_with_deseq(treatdds, physeq1)
+print(FSTTimeImmobile_binned_ASVs)
+## DESeq2 analysis using FSTTimeImmobile_binned
+treatdds = phyloseq_to_deseq2(physeq_genus, ~FSTTimeImmobile_binned)
+## Genus level table
+FSTTimeImmobile_binned_genus <- taxa_with_deseq(treatdds, physeq_genus)
 
+print(FSTTimeImmobile_binned_genus)
+```
+
+```{r ASV_by_NOObjpref_binned, echo=FALSE}
+## Convert to deseq2 object using the specified covariate
+treatdds = phyloseq_to_deseq2(phyloseq_object, ~NOObjpref_binned)
+## Generated table containing ASVs
+NOObjpref_binned_ASVs <- taxa_with_deseq(treatdds, physeq1)
+print(NOObjpref_binned_ASVs)
+## DESeq2 analysis using FSTTimeImmobile_binned
+treatdds = phyloseq_to_deseq2(physeq_genus, ~NOObjpref_binned)
+## Genus level table
+NOObjpref_binned_genus <- taxa_with_deseq(treatdds, physeq_genus)
+
+print(NOObjpref_binned_genus)
+```
+
+```{r ASV_by_OFCentDur1_binned, echo=FALSE}
+## Convert to deseq2 object using the specified covariate
+treatdds = phyloseq_to_deseq2(phyloseq_object, ~OFCentDur1_binned)
+## Generated table containing ASVs
+OFCentDur1_binned_ASVs <- taxa_with_deseq(treatdds, physeq1)
+print(OFCentDur1_binned_ASVs)
+## DESeq2 analysis using FSTTimeImmobile_binned
+treatdds = phyloseq_to_deseq2(physeq_genus, ~OFCentDur1_binned)
+## Genus level table
+OFCentDur1_binned_genus <- taxa_with_deseq(treatdds, physeq_genus)
+
+print(OFCentDur1_binned_genus)
+```
+
+```{r ASV_by_OFTotDistDay1_binned, echo=FALSE}
+## Convert to deseq2 object using the specified covariate
+treatdds = phyloseq_to_deseq2(phyloseq_object, ~OFTotDistDay1_binned)
+## Generated table containing ASVs
+OFTotDistDay1_binned_ASVs <- taxa_with_deseq(treatdds, physeq1)
+print(OFTotDistDay1_binned_ASVs)
+## DESeq2 analysis using FSTTimeImmobile_binned
+treatdds = phyloseq_to_deseq2(physeq_genus, ~OFTotDistDay1_binned)
+## Genus level table
+OFTotDistDay1_binned_genus <- taxa_with_deseq(treatdds, physeq_genus)
+
+print(FSTTimeImmobile_binned_genus)
+```
+
+```{r ASV_by_PALatencyDiff_binned, echo=FALSE}
+## Convert to deseq2 object using the specified covariate
+treatdds = phyloseq_to_deseq2(phyloseq_object, ~PALatencyDiff_binned)
+## Generated table containing ASVs
+PALatencyDiff_binned_ASVs <- taxa_with_deseq(treatdds, physeq1)
+print(PALatencyDiff_binned_ASVs)
+## DESeq2 analysis using FSTTimeImmobile_binned
+treatdds = phyloseq_to_deseq2(physeq_genus, ~PALatencyDiff_binned)
+## Genus level table
+PALatencyDiff_binned_genus <- taxa_with_deseq(treatdds, physeq_genus)
+
+print(PALatencyDiff_binned_genus)
+```
+
+```{r ASV_by_PALatCross_binned, echo=FALSE}
+## Convert to deseq2 object using the specified covariate
+treatdds = phyloseq_to_deseq2(phyloseq_object, ~PALatCross_binned)
+## Generated table containing ASVs
+PALatCross_binned_ASVs <- taxa_with_deseq(treatdds, physeq1)
+print(PALatCross_binned_ASVs)
+## DESeq2 analysis using FSTTimeImmobile_binned
+treatdds = phyloseq_to_deseq2(physeq_genus, ~PALatCross_binned)
+## Genus level table
+PALatCross_binned_genus <- taxa_with_deseq(treatdds, physeq_genus)
+
+print(PALatCross_binned_genus)
+```
 
 ```{r commentary}
 ##Alpha diversity is a metric that describes the diversity of taxa in a specific sample or set. Alpha diversity measures did not differ significantly between treatment groups, and no association between alpha diversity and radiation level was detected. However, FSTTimeImmobile times were associated with alpha diversity (alpha diversity metric "Shannon", Kendall's tau, p-value=0.03692).
