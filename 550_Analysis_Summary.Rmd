@@ -45,6 +45,8 @@ sample_data(physeq)$OFCentDur1_binned <- bin(sample_data(physeq)$OFCentDur1, nbi
 sample_data(physeq)$FCCuedFrzTone_binned <- bin(sample_data(physeq)$FCCuedFrzTone, nbins=4, labels=c("first", "second", "third", "fourth"), method="content")
 sample_data(physeq)$OFTotDistDay1_binned <- bin(sample_data(physeq)$OFTotDistDay1, nbins=4, labels=c("first", "second", "third", "fourth"), method="content")
 sample_data(physeq)$PALatencyDiff_binned <- bin(sample_data(physeq)$PALatencyDiff, nbins=4, labels=c("first", "second", "third", "fourth"), method="content")
+sample_data(physeq)$PALatCross_binned <- bin(sample_data(physeq)$PALatCross, nbins=4, labels=c("first", "second", "third", "fourth"), method="content")
+sample_data(physeq)$Treatment <- factor(sample_data(physeq)$Treatment)
 ##Setting a couple of variables equal to physeq. Vars will be modified and updated later on
 physeq1 <- physeq
 phyloseq_object <- physeq
@@ -57,8 +59,7 @@ physeq_enfit <- envfit(physeq_ordination~Treatment*Sex+FSTTimeImmobile+NOObjpref
 ##Using metaMDS (the default of phyloseq's ordinate function) this creates an NMDS ordination using the bray-curtis dissimilarity index. Treatment is set to a factor in the physeq2 variable to help with plotting, but it remains a numeric in the original. Reads are normalized before the ordination is plotted, although, if jaccard is used do not use this step. As a brief note, for the data in question, Jaccard shows the sex difference in a much more stark fashion.
 set.seed(1)
 physeq2 <- rarefy_even_depth(physeq1)
-physeq2.ord <- ordinate(physeq2, "NMDS", "bray", trymax=50, k=3)
-sample_data(physeq2)$Treatment <- factor(sample_data(physeq2)$Treatment)
+physeq2.ord <- ordinate(physeq2, "NMDS", "bray", trymax=500, k=3, verbose=FALSE)
 ##Feel free to play with the axes a little bit here to look at axes 1,3 or 2,3
 physeq2.ord.plot <- plot_ordination(physeq2, physeq2.ord, type="samples", axes=c(1,2), color="Sex", title="BySex")
 ##The female points (pink) are quite dispersed, and our analyses show that there is a particularly high level of dispersion among the females irradiated at 50cGy.
@@ -67,7 +68,7 @@ physeq2.ord.treatment <- plot_ordination(physeq2, physeq2.ord, type="samples", a
 physeq2.dist <- vegdist(otu_table(physeq2), method="bray")
 sampledf <- data.frame(sample_data(physeq2))
 set.seed(1)
-perm.results.treatment <- adonis(physeq2.dist ~PALatencyDiff, data=sampledf, permutations=5000)
+perm.results.treatment <- adonis(physeq2.dist ~Treatment, data=sampledf, permutations=5000)
 print(perm.results.treatment)
 ##The code below uses rarefied data to create a dataframe which can be used to accurately plot counts further down. It starts by creating one for ASVs
 asv_table=(otu_table(physeq2))
@@ -122,9 +123,7 @@ print(Treatment_genus)
 
 ```
 
-
-
-```{r DESeq_analyses_by_covariate, echo=FALSE, include=FALSE}
+```{r DESeq2_Sex_by_Treatment, echo=FALSE, include=FALSE}
 ##For the interaction of Treatment and Sex
 ## Convert to deseq2 object using the specified covariate
 dds_ASV_Treat_Sex = phyloseq_to_deseq2(phyloseq_object, ~Sex*Treatment)
