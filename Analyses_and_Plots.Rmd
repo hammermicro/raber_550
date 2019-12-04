@@ -18,8 +18,8 @@ library("vegan")
 library("DESeq2")
 library("knitr")
 library("OneR")
-seqtab <- readRDS("C:/Users/hammera/Desktop/raber_550/data/280_seqtab_final.rds")
-seqtab.taxa <- readRDS("C:/Users/hammera/Desktop/raber_550/data/280_taxa_final.rds")
+seqtab <- readRDS("C:/Users/hammera/Desktop/raber_550/data/290190_seqtab_final.rds")
+seqtab.taxa <- readRDS("C:/Users/hammera/Desktop/raber_550/data/290190_taxa_final.rds")
 seqtab <- (seqtab)
 meta_data <- as.data.frame(read_excel("C:/Users/hammera/Desktop/raber_550/data/550_metadata_revised.xlsx"))
 rownames(seqtab) <- meta_data$RaberSID
@@ -295,7 +295,7 @@ print(Treatment_genus)
 ##plotting_taxa
 ##plotting_taxa <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=Treatment, y=ASV231)) + geom_point() + geom_smooth(method="auto") + facet_grid(rows=vars(Sex))
 ##plotting_taxa
-
+##ASVs to consider: 
 ```
 
 ```{r ASV_by_Sex, echo=FALSE}
@@ -337,6 +337,9 @@ treatdds = phyloseq_to_deseq2(physeq_genus, ~FSTTimeImmobile_binned)
 FSTTimeImmobile_binned_genus <- taxa_with_deseq(treatdds, physeq_genus)
 
 print(FSTTimeImmobile_binned_genus)
+#ASVs of interest: 315, 335, 336, 407, 513
+plotting_taxa <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=FSTTimeImmobile_binned, y=ASV264))  + geom_boxplot() + geom_jitter()
+plotting_taxa
 ```
 
 ```{r ASV_by_NOObjpref_binned, echo=FALSE}
@@ -351,6 +354,8 @@ treatdds = phyloseq_to_deseq2(physeq_genus, ~NOObjpref_binned)
 NOObjpref_binned_genus <- taxa_with_deseq(treatdds, physeq_genus)
 
 print(NOObjpref_binned_genus)
+#ASVs: 308, 323, 325, 336, 369, 374, 417, 
+## With some covariates the scores are reasonably close to each other, which could result in a very small difference between groups 1, 2, and 3, whereas the 4 group is way out. Additionally, the issue of many zeros in the data makes it hard to infer if a particular trend is driven by specific microbes, or just a stochastic artifact.
 ```
 
 ```{r ASV_by_OFCentDur1_binned, echo=FALSE}
@@ -431,17 +436,17 @@ oldstudyasv <- otu_table(physeq_s1)
 oldstudydata <- sample_data(physeq_s1)
 new_physeq_s1 <- phyloseq(oldstudytax, oldstudyasv, oldstudydata)
 new_merged_physeq <- merge_phyloseq(new_physeq_s1, (physeq))
-new_merged_physeq <- subset_samples(new_merged_physeq, Treatment=="0")
+##new_merged_physeq <- subset_samples(new_merged_physeq, Treatment=="0")
 new_merged_physeq <- tax_glom(new_merged_physeq, "Genus")
+new_merged_physeq <- rarefy_even_depth(new_merged_physeq)
 merged_df <- data.frame(sample_data(new_merged_physeq)[,1:3])
 sample_data(new_merged_physeq) <- sample_data(merged_df)
 new_physeq_ordination_merged <- ordinate(new_merged_physeq, method="NMDS", distance="jaccard")
-plot_new_merged_ordination <- plot_ordination(new_merged_physeq, new_physeq_ordination_merged, type="samples", color="Study")
+plot_new_merged_ordination <- plot_ordination(new_merged_physeq, new_physeq_ordination_merged, type="samples", color="Treatment", shape="Study")
 plot_new_merged_ordination
-merged_df <- data.frame(sample_data(new_merged_physeq)[,1:3])
-merged_ordination = metaMDS(otu_table(new_merged_physeq), distance="bray", k=4, trymax=1000, data=merged_df)
-nmds_table = scores(merged_ordination, display="sites")
-plot(nmds_table[,1], nmds_table[,2], main="Bray-Curtis Beta-div", xlab="NMDS1", ylab="NMDS2", pch=20, shape="Study")
+##merged_ordination = metaMDS(otu_table(new_merged_physeq), distance="bray", k=4, trymax=1000, data=merged_df)
+##nmds_table = scores(merged_ordination, display="sites")
+##plot(nmds_table[,1], nmds_table[,2], main="Bray-Curtis Beta-div", xlab="NMDS1", ylab="NMDS2", pch=20, shape="Study")
 
 
 ##PERMANOVA to show that the difference is actually frigging huge
