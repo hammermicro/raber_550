@@ -355,7 +355,8 @@ NOObjpref_binned_genus <- taxa_with_deseq(treatdds, physeq_genus)
 
 print(NOObjpref_binned_genus)
 #ASVs: 308, 323, 325, 336, 369, 374, 417, 
-## With some covariates the scores are reasonably close to each other, which could result in a very small difference between groups 1, 2, and 3, whereas the 4 group is way out. Additionally, the issue of many zeros in the data makes it hard to infer if a particular trend is driven by specific microbes, or just a stochastic artifact.
+## With some covariates the scores are reasonably close to each other, which could result in a very small difference between groups 1, 2, and 3, whereas the 4 group is way out. Additionally, the issue of sparsity makes it hard to determine if a particular trend is driven by a specific ASV or is just a stochastic artifact.
+## Wouldn't sparsity make correlation pretty difficult to determine with most microbiome data? At least at the level of ASV vs some covariate?
 ```
 
 ```{r ASV_by_OFCentDur1_binned, echo=FALSE}
@@ -370,6 +371,7 @@ treatdds = phyloseq_to_deseq2(physeq_genus, ~OFCentDur1_binned)
 OFCentDur1_binned_genus <- taxa_with_deseq(treatdds, physeq_genus)
 
 print(OFCentDur1_binned_genus)
+##ASVs: 336 (look at binned and not binned), 
 ```
 
 ```{r ASV_by_OFTotDistDay1_binned, echo=FALSE}
