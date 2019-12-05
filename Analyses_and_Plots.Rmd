@@ -403,6 +403,10 @@ treatdds = phyloseq_to_deseq2(physeq_genus, ~PALatencyDiff_binned)
 PALatencyDiff_binned_genus <- taxa_with_deseq(treatdds, physeq_genus)
 
 print(PALatencyDiff_binned_genus)
+##ASVs: 302 (visit with Tom about this one), 
+
+##plotting_taxa <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=PALatencyDiff, y=ASV302))  + geom_point(aes(color=Treatment))
+##plotting_taxa
 ```
 
 ```{r ASV_by_PALatCross_binned, echo=FALSE}
