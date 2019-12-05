@@ -146,10 +146,7 @@ taxa_with_deseq <- function(treatdds, physeq1){
   res = results(treatdds.deseq, cooksCutoff=FALSE)
   res = data.frame(res)
   alpha = 0.1
-
-  #remove_nas <- is.na(res$padj)
-  #sigtab <- subset(res, remove_nas)
-  ##MAke a note of sfType -poscounts and fitType = local - This should decrease the likelihood that a single outlier drives the observation
+  ##Make a note of sfType -poscounts and fitType = local - This should decrease the likelihood that a single outlier drives the observation
   ## Behavioral results are probably being driven by this,
   ##prevalence filter 
   res2   <- subset(res, !is.na(res$padj))
@@ -284,18 +281,12 @@ treatdds = phyloseq_to_deseq2(physeq_genus, ~Treatment)
 Treatment_genus <- taxa_with_deseq(treatdds, physeq_genus)
 print(Treatment_genus)
 ## ASV656 identified as significant using DESeq2 at the genus level, occurs more frequently and in increased abundance across samples at radiation levels under 50cGy, but its abundance and presence is markedly lower at 200cGy (p-value ~0.02)
-##plotting_taxa <- ggplot(taxa_table_plus_metadata_genus_rare, aes(x=Treatment, y=ASV656))  + geom_smooth(method="lm") + geom_jitter()
+##plotting_taxa <- ggplot(taxa_table_plus_metadata_genus_rare, aes(x=(Treatment), y=ASV656))  + geom_smooth() + geom_jitter()
 ##plotting_taxa
 
-## ASV429 from the Ruminococceae was identified as being significantly associated with Treatment(p-value=) and the graph of this shows high abundance for a number of samples at a low radiation level, but none at 50cGy and above.
-##plotting_taxa <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=Treatment, y=ASV429)) + geom_jitter() + geom_smooth(method="lm")
+##plotting_taxa <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=Treatment, y=ASV231))  + geom_point(aes(color=Treatment))
 ##plotting_taxa
-
-##plotting_taxa <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=Sex, y=ASV6)) + geom_boxplot() + facet_grid(cols=vars(Treatment), as.table=TRUE)
-##plotting_taxa
-##plotting_taxa <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=Treatment, y=ASV231)) + geom_point() + geom_smooth(method="auto") + facet_grid(rows=vars(Sex))
-##plotting_taxa
-##ASVs to consider: 
+##ASVs: 231 (Rikenellaceae - Alstipes), 
 ```
 
 ```{r ASV_by_Sex, echo=FALSE}
@@ -321,6 +312,9 @@ print(Treatment_Sex_ASVs)
 treatdds = phyloseq_to_deseq2(physeq_genus, ~Sex*Treatment)
 ## Genus level table
 Treatment_Sex_genus <- taxa_with_deseq(treatdds, physeq_genus)
+
+##plotting_taxa <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=Treatment, y=ASV191))  + geom_point(aes(color=Treatment)) + facet_grid(row=vars(Sex)) + geom_boxplot()
+##plotting_taxa
 
 print(Treatment_Sex_genus)
 ```
@@ -403,9 +397,9 @@ treatdds = phyloseq_to_deseq2(physeq_genus, ~PALatencyDiff_binned)
 PALatencyDiff_binned_genus <- taxa_with_deseq(treatdds, physeq_genus)
 
 print(PALatencyDiff_binned_genus)
-##ASVs: 302 (visit with Tom about this one), 
+##ASVs: 
 
-##plotting_taxa <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=PALatencyDiff, y=ASV302))  + geom_point(aes(color=Treatment))
+##plotting_taxa <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=PALatencyDiff, y=ASV302))  + geom_point(aes(color=Sex))
 ##plotting_taxa
 ```
 
@@ -421,6 +415,8 @@ treatdds = phyloseq_to_deseq2(physeq_genus, ~PALatCross_binned)
 PALatCross_binned_genus <- taxa_with_deseq(treatdds, physeq_genus)
 
 print(PALatCross_binned_genus)
+
+##ASVs: 
 ```
 
 ```{r commentary}
