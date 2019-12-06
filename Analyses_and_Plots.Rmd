@@ -286,7 +286,8 @@ print(Treatment_genus)
 
 ##plotting_taxa <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=Treatment, y=ASV231))  + geom_point(aes(color=Treatment))
 ##plotting_taxa
-##ASVs: 231 (Rikenellaceae - Alstipes), 
+##ASVs: 231 (Rikenellaceae - Alstipes), 324 (Alstipes), 419-410 are both helicobacter that shows up in the highly radiated samples, the one instance of rikenella in the results below appears to be decreasing
+## It's interesting that most of the log2foldChange results seems to be clustered around abs(x) = 21-22, does this have to do with the sparsity?
 ```
 
 ```{r ASV_by_Sex, echo=FALSE}
@@ -457,7 +458,7 @@ plot_new_merged_ordination
 ##PERMANOVA to show that the difference is actually frigging huge
 study_object_dist <- vegdist(otu_table(new_merged_physeq), "bray")
 set.seed(1)
-study_difference_permanova <- adonis(study_object_dist ~ Study, data=merged_df, permutations=5000)
+study_difference_permanova <- adonis(study_object_dist ~ Treatment, data=merged_df, permutations=5000)
 print(study_difference_permanova)
 ```
 
