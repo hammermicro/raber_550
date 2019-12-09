@@ -143,7 +143,7 @@ taxa_with_deseq <- function(treatdds, physeq1){
   sigtab <- NULL
   ##treatdds = phyloseq_to_deseq2(phyloseq_object, ~"some_covariate")
   treatdds.deseq = DESeq(treatdds, fitType = "local", sfType = "poscounts")
-  res = results(treatdds.deseq, cooksCutoff=FALSE)
+  res = results(treatdds.deseq, cooksCutoff=TRUE)
   res = data.frame(res)
   alpha = 0.1
   ##Make a note of sfType -poscounts and fitType = local - This should decrease the likelihood that a single outlier drives the observation
@@ -286,8 +286,11 @@ print(Treatment_genus)
 
 ##plotting_taxa <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=Treatment, y=ASV231))  + geom_point(aes(color=Treatment))
 ##plotting_taxa
-##ASVs: 231 (Rikenellaceae - Alstipes), 324 (Alstipes), 419-410 are both helicobacter that shows up in the highly radiated samples, the one instance of rikenella in the results below appears to be decreasing
+##ASVs: 231 (Rikenellaceae - Alistipes), 324 (Alistipes), 419-410 are both helicobacter that shows up in the highly radiated samples, the one instance of rikenella in the results below appears to be decreasing
 ## It's interesting that most of the log2foldChange results seems to be clustered around abs(x) = 21-22, does this have to do with the sparsity?
+## Microbes from the Clostridiales Order were also implicated as significantly increasing in abundance. Considering their previously established role in brain function this could be an interesting inclusion
+## Mention alpha diversity, build on each section by mentioning what I did, what the results were, and (MAYBE) a little information about what the results might mean
+##Comparison to three-beam, and why that might be the case (report the three beam vs six beam data) do your best to include this
 ```
 
 ```{r ASV_by_Sex, echo=FALSE}
@@ -318,6 +321,7 @@ Treatment_Sex_genus <- taxa_with_deseq(treatdds, physeq_genus)
 ##plotting_taxa
 
 print(Treatment_Sex_genus)
+## The Turicibacter genus is expressed across the female treatments (maybe, a slight increase in the abundance), but it's almost nonexistent among males
 ```
 
 ```{r ASV_by_FSTTimeImmobile_binned, echo=FALSE}
@@ -381,7 +385,7 @@ treatdds = phyloseq_to_deseq2(physeq_genus, ~OFTotDistDay1_binned)
 OFTotDistDay1_binned_genus <- taxa_with_deseq(treatdds, physeq_genus)
 
 print(OFTotDistDay1_binned_genu)
-##ASVs: 316 (consider binned vs non),
+##ASVs: 316 (consider binned vs non, this illustrates the difficulty of making inferences driven by a single point)
 ##One pattern that could emerge is that simply having a higher bacterial load might be associated with higher scores on some behavioral assays, perhaps this is independent of a particular taxa and has to do with immune function related to taxa
 ## I would be interested to see if there are any taxa that covary with measured BDNF levels, as that might be an interesting possible mechanistic focus
 ```
