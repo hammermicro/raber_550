@@ -58,8 +58,11 @@ corr_df <- data.frame(sample_data(physeq1))
 aov_results <- aov(as.matrix(Alphadiv) ~ Treatment, data=corr_df)
 anova_results <- anova(aov_results)
 some_plot <- plot((as.matrix(Alphadiv))~FSTTimeImmobile, data=corr_df)
-testing_cor_adiv <- cor.test(x=corr_df$FSTTimeImmobile, y=(as.matrix(corr_df$Alphadiv)), method=c("kendall"))
+testing_cor_adiv <- cor.test(x=corr_df$FSTTimeImmobile, y=(as.matrix(corr_df$Alphadiv)), method=c("spearman"))
 print(testing_cor_adiv)
+lm_testing <- lm(as.matrix(Alphadiv) ~ FSTTimeImmobile, data=corr_df)
+ggplot(corr_df, aes(x=FSTTimeImmobile, y=as.matrix(Alphadiv))) + geom_smooth(method="lm") + geom_point(aes(color=Sex))
+kruskal.test()
 ```
 
 ```{r enfit, echo=FALSE}
@@ -150,6 +153,7 @@ taxa_with_deseq <- function(treatdds, physeq1){
   ## Behavioral results are probably being driven by this,
   ##prevalence filter 
   res2   <- subset(res, !is.na(res$padj))
+  print(EnhancedVolcano(res2, lab=rownames(res2), x='log2FoldChange', y='pvalue'))
   sigtab <- subset(res2, res2$padj < alpha)
   if (nrow(sigtab)>0){
     sigtab = cbind(as(sigtab, "data.frame"), as(tax_table(physeq1)[rownames(sigtab), ], "matrix"))
@@ -172,7 +176,7 @@ physeq_genus <- tax_glom(physeq, taxrank="Genus")
 ##This is a basic workthrough that runs DESeq2 for analysis of taxa analysis. One thing that that I should consider is filtering the available taxa to so that only taxa that are present in 50% of samples or greater. This would eliminate this issue where differences are inflated by the presence of a bunch of zeros for a particular group. I think that effect could largely be driven by the Box covariate, which is possibly suggested in the adonis results as well.
 ## A couple limitations 
 sigtab <- NULL
-treatdds = phyloseq_to_deseq2(physeq_genus, ~Treatment)
+treatdds = phyloseq_to_deseq2(physeq, ~Treatment)
 treatdds.deseq = DESeq(treatdds)
 res = results(treatdds.deseq, cooksCutoff=FALSE)
 res = data.frame(res)
@@ -291,6 +295,7 @@ print(Treatment_genus)
 ## Microbes from the Clostridiales Order were also implicated as significantly increasing in abundance. Considering their previously established role in brain function this could be an interesting inclusion
 ## Mention alpha diversity, build on each section by mentioning what I did, what the results were, and (MAYBE) a little information about what the results might mean
 ##Comparison to three-beam, and why that might be the case (report the three beam vs six beam data) do your best to include this
+##One figure 
 ```
 
 ```{r ASV_by_Sex, echo=FALSE}
@@ -322,6 +327,8 @@ Treatment_Sex_genus <- taxa_with_deseq(treatdds, physeq_genus)
 
 print(Treatment_Sex_genus)
 ## The Turicibacter genus is expressed across the female treatments (maybe, a slight increase in the abundance), but it's almost nonexistent among males
+##Make sure to include information on the Sex differences of particular ASVs
+##cow-plot look into this for 
 ```
 
 ```{r ASV_by_FSTTimeImmobile_binned, echo=FALSE}

@@ -88,7 +88,7 @@ library("phyloseq")
 taxa_with_deseq <- function(treatdds, physeq1){ 
   sigtab <- NULL
   treatdds.deseq = DESeq(treatdds, fitType = "parametric", sfType = "poscounts")
-  res = results(treatdds.deseq, cooksCutoff=FALSE)
+  res = results(treatdds.deseq, cooksCutoff=TRUE)
   res = data.frame(res)
   alpha = 0.1
   #remove_nas <- is.na(res$padj)
@@ -97,6 +97,7 @@ taxa_with_deseq <- function(treatdds, physeq1){
   ## Behavioral results are probably being driven by this,
   ##prevalence filter 
   res2   <- subset(res, !is.na(res$padj))
+  print(EnhancedVolcano(res2, lab=rownames(res2), x='log2FoldChange', y='pvalue'))
   sigtab <- subset(res2, res2$padj < alpha)
   if (nrow(sigtab)>0){
     sigtab = cbind(as(sigtab, "data.frame"), as(tax_table(physeq1)[rownames(sigtab), ], "matrix"))
