@@ -61,8 +61,8 @@ some_plot <- plot((as.matrix(Alphadiv))~FSTTimeImmobile, data=corr_df)
 testing_cor_adiv <- cor.test(x=corr_df$FSTTimeImmobile, y=(as.matrix(corr_df$Alphadiv)), method=c("spearman"))
 print(testing_cor_adiv)
 lm_testing <- lm(as.matrix(Alphadiv) ~ FSTTimeImmobile, data=corr_df)
-ggplot(corr_df, aes(x=FSTTimeImmobile, y=as.matrix(Alphadiv))) + geom_smooth(method="lm") + geom_point(aes(color=Sex))
-kruskal.test()
+ggplot(corr_df, aes(x=FSTTimeImmobile, y=as.matrix(Alphadiv)), ylab="Shannon") + geom_smooth(method="lm", ylab="Shannon") + geom_point(aes(color=FSTTimeImmobile_binned)) + ylab("Shannon") + xlab("Forced Swim Test Time Immobile")
+
 ```
 
 ```{r enfit, echo=FALSE}
@@ -148,12 +148,12 @@ taxa_with_deseq <- function(treatdds, physeq1){
   treatdds.deseq = DESeq(treatdds, fitType = "local", sfType = "poscounts")
   res = results(treatdds.deseq, cooksCutoff=TRUE)
   res = data.frame(res)
-  alpha = 0.1
+  alpha = 0.001
   ##Make a note of sfType -poscounts and fitType = local - This should decrease the likelihood that a single outlier drives the observation
   ## Behavioral results are probably being driven by this,
   ##prevalence filter 
   res2   <- subset(res, !is.na(res$padj))
-  print(EnhancedVolcano(res2, lab=rownames(res2), x='log2FoldChange', y='pvalue'))
+  print(EnhancedVolcano(res2, lab=rownames(res2), x='log2FoldChange', y='pvalue') + ggtitle(""))
   sigtab <- subset(res2, res2$padj < alpha)
   if (nrow(sigtab)>0){
     sigtab = cbind(as(sigtab, "data.frame"), as(tax_table(physeq1)[rownames(sigtab), ], "matrix"))
@@ -180,7 +180,7 @@ treatdds = phyloseq_to_deseq2(physeq, ~Treatment)
 treatdds.deseq = DESeq(treatdds)
 res = results(treatdds.deseq, cooksCutoff=FALSE)
 res = data.frame(res)
-alpha = 0.1
+alpha = 0.001
 remove_nas <- is.na(res$adj)
 sigtab <- subset(res, remove_nas)
 res <- subset(res, !is.na(res$padj))
@@ -222,7 +222,7 @@ physeq_genus <- tax_glom(physeq, taxrank="Genus")
 
 ```{r ASV_by_OFTotDistDay1, echo=FALSE}
 ## DESeq2 analysis using the specified covariate (ASV level)
-treatdds = phyloseq_to_deseq2(phyloseq_object, ~OFTotDistDay1)
+treatdds = phyloseq_to_deseq2(physeq1, ~OFTotDistDay1)
 ## Generated table containing ASVs
 OFTotDistDay1_ASVs <- taxa_with_deseq(treatdds, physeq1)
 print(OFTotDistDay1_ASVs)
@@ -235,7 +235,7 @@ print(OFTotDistDay1_genus)
 
 ```{r ASV_by_FSTTimeImmobile, echo=FALSE}
 ## DESeq2 analysis using the specified covariate (ASV level)
-treatdds = phyloseq_to_deseq2(phyloseq_object, ~FSTTimeImmobile)
+treatdds = phyloseq_to_deseq2(physeq1, ~FSTTimeImmobile)
 ## Generated table containing ASVs
 FSTTimeImmobile_ASVs <- taxa_with_deseq(treatdds, physeq1)
 print(FSTTimeImmobile_ASVs)
@@ -248,7 +248,7 @@ print(FSTTimeImmobile_genus)
 
 ```{r ASV_by_NOObjpref, echo=FALSE}
 ## Convert to deseq2 object using the specified covariate
-treatdds = phyloseq_to_deseq2(phyloseq_object, ~NOObjpref)
+treatdds = phyloseq_to_deseq2(physeq1, ~NOObjpref)
 ## Generated table containing ASVs
 NOObjpref_ASVs <- taxa_with_deseq(treatdds, physeq1)
 print(NOObjpref_ASVs)
@@ -262,7 +262,7 @@ print(NOObjpref_genus)
 
 ```{r ASV_by_OFCentDur1, echo=FALSE}
 ## Convert to deseq2 object using the specified covariate
-treatdds = phyloseq_to_deseq2(phyloseq_object, ~OFCentDur1)
+treatdds = phyloseq_to_deseq2(physeq1, ~OFCentDur1)
 ## Generated table containing ASVs
 OFCentDur1_ASVs <- taxa_with_deseq(treatdds, physeq1)
 print(OFCentDur1_ASVs)
@@ -275,14 +275,14 @@ print(OFCentDur1_genus)
 
 ```{r ASV_by_Treatment, echo=FALSE}
 ## Convert to deseq2 object using the specified covariate
-treatdds = phyloseq_to_deseq2(phyloseq_object, ~Treatment)
+treatdds = phyloseq_to_deseq2(physeq1, ~Treatment)
 ## Generated table containing ASVs
 Treatment_ASVs <- taxa_with_deseq(treatdds, physeq1)
 print(Treatment_ASVs)
 ## DESeq2 analysis using Treatment
-treatdds = phyloseq_to_deseq2(physeq_genus, ~Treatment)
+treatdds = phyloseq_to_deseq2(physeq_genus1, ~Treatment)
 ## Genus level table
-Treatment_genus <- taxa_with_deseq(treatdds, physeq_genus)
+Treatment_genus <- taxa_with_deseq(treatdds, physeq_genus1)
 print(Treatment_genus)
 ## ASV656 identified as significant using DESeq2 at the genus level, occurs more frequently and in increased abundance across samples at radiation levels under 50cGy, but its abundance and presence is markedly lower at 200cGy (p-value ~0.02)
 ##plotting_taxa <- ggplot(taxa_table_plus_metadata_genus_rare, aes(x=(Treatment), y=ASV656))  + geom_smooth() + geom_jitter()
@@ -300,7 +300,7 @@ print(Treatment_genus)
 
 ```{r ASV_by_Sex, echo=FALSE}
 ## Convert to deseq2 object using the specified covariate
-treatdds = phyloseq_to_deseq2(phyloseq_object, ~Sex)
+treatdds = phyloseq_to_deseq2(physeq1, ~Sex)
 ## Generated table containing ASVs
 Sex_ASVs <- taxa_with_deseq(treatdds, physeq1)
 print(Sex_ASVs)
@@ -313,7 +313,7 @@ print(Sex_genus)
 
 ```{r ASV_by_Treatment_interaction_Sex, echo=FALSE}
 ## Convert to deseq2 object using the specified covariate
-treatdds = phyloseq_to_deseq2(phyloseq_object, ~Sex*Treatment)
+treatdds = phyloseq_to_deseq2(physeq1, ~Sex*Treatment)
 ## Generated table containing ASVs
 Treatment_Sex_ASVs <- taxa_with_deseq(treatdds, physeq1)
 print(Treatment_Sex_ASVs)
@@ -333,7 +333,7 @@ print(Treatment_Sex_genus)
 
 ```{r ASV_by_FSTTimeImmobile_binned, echo=FALSE}
 ## Convert to deseq2 object using the specified covariate
-treatdds = phyloseq_to_deseq2(phyloseq_object, ~FSTTimeImmobile_binned)
+treatdds = phyloseq_to_deseq2(physeq1, ~FSTTimeImmobile_binned)
 ## Generated table containing ASVs
 FSTTimeImmobile_binned_ASVs <- taxa_with_deseq(treatdds, physeq1)
 print(FSTTimeImmobile_binned_ASVs)
@@ -344,13 +344,13 @@ FSTTimeImmobile_binned_genus <- taxa_with_deseq(treatdds, physeq_genus)
 
 print(FSTTimeImmobile_binned_genus)
 #ASVs of interest: 315, 335, 336, 407, 513
-plotting_taxa <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=FSTTimeImmobile_binned, y=ASV264))  + geom_boxplot() + geom_jitter()
-plotting_taxa
+##plotting_taxa <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=FSTTimeImmobile_binned, y=ASV264))  + geom_boxplot()
+##plotting_taxa
 ```
 
 ```{r ASV_by_NOObjpref_binned, echo=FALSE}
 ## Convert to deseq2 object using the specified covariate
-treatdds = phyloseq_to_deseq2(phyloseq_object, ~NOObjpref_binned)
+treatdds = phyloseq_to_deseq2(physeq1, ~NOObjpref_binned)
 ## Generated table containing ASVs
 NOObjpref_binned_ASVs <- taxa_with_deseq(treatdds, physeq1)
 print(NOObjpref_binned_ASVs)
@@ -367,7 +367,7 @@ print(NOObjpref_binned_genus)
 
 ```{r ASV_by_OFCentDur1_binned, echo=FALSE}
 ## Convert to deseq2 object using the specified covariate
-treatdds = phyloseq_to_deseq2(phyloseq_object, ~OFCentDur1_binned)
+treatdds = phyloseq_to_deseq2(physeq1, ~OFCentDur1_binned)
 ## Generated table containing ASVs
 OFCentDur1_binned_ASVs <- taxa_with_deseq(treatdds, physeq1)
 print(OFCentDur1_binned_ASVs)
@@ -382,7 +382,7 @@ print(OFCentDur1_binned_genus)
 
 ```{r ASV_by_OFTotDistDay1_binned, echo=FALSE}
 ## Convert to deseq2 object using the specified covariate
-treatdds = phyloseq_to_deseq2(phyloseq_object, ~OFTotDistDay1_binned)
+treatdds = phyloseq_to_deseq2(physeq1, ~OFTotDistDay1_binned)
 ## Generated table containing ASVs
 OFTotDistDay1_binned_ASVs <- taxa_with_deseq(treatdds, physeq1)
 print(OFTotDistDay1_binned_ASVs)
@@ -391,7 +391,7 @@ treatdds = phyloseq_to_deseq2(physeq_genus, ~OFTotDistDay1_binned)
 ## Genus level table
 OFTotDistDay1_binned_genus <- taxa_with_deseq(treatdds, physeq_genus)
 
-print(OFTotDistDay1_binned_genu)
+print(OFTotDistDay1_binned_genus)
 ##ASVs: 316 (consider binned vs non, this illustrates the difficulty of making inferences driven by a single point)
 ##One pattern that could emerge is that simply having a higher bacterial load might be associated with higher scores on some behavioral assays, perhaps this is independent of a particular taxa and has to do with immune function related to taxa
 ## I would be interested to see if there are any taxa that covary with measured BDNF levels, as that might be an interesting possible mechanistic focus
@@ -399,7 +399,7 @@ print(OFTotDistDay1_binned_genu)
 
 ```{r ASV_by_PALatencyDiff_binned, echo=FALSE}
 ## Convert to deseq2 object using the specified covariate
-treatdds = phyloseq_to_deseq2(phyloseq_object, ~PALatencyDiff_binned)
+treatdds = phyloseq_to_deseq2(physeq1, ~PALatencyDiff_binned)
 ## Generated table containing ASVs
 PALatencyDiff_binned_ASVs <- taxa_with_deseq(treatdds, physeq1)
 print(PALatencyDiff_binned_ASVs)
@@ -417,7 +417,7 @@ print(PALatencyDiff_binned_genus)
 
 ```{r ASV_by_PALatCross_binned, echo=FALSE}
 ## Convert to deseq2 object using the specified covariate
-treatdds = phyloseq_to_deseq2(phyloseq_object, ~PALatCross_binned)
+treatdds = phyloseq_to_deseq2(physeq1, ~PALatCross_binned)
 ## Generated table containing ASVs
 PALatCross_binned_ASVs <- taxa_with_deseq(treatdds, physeq1)
 print(PALatCross_binned_ASVs)
