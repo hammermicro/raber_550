@@ -61,7 +61,7 @@ some_plot <- plot((as.matrix(Alphadiv))~FSTTimeImmobile, data=corr_df)
 testing_cor_adiv <- cor.test(x=corr_df$FSTTimeImmobile, y=(as.matrix(corr_df$Alphadiv)), method=c("spearman"))
 print(testing_cor_adiv)
 lm_testing <- lm(as.matrix(Alphadiv) ~ FSTTimeImmobile, data=corr_df)
-ggplot(corr_df, aes(x=FSTTimeImmobile, y=as.matrix(Alphadiv)), ylab="Shannon") + geom_smooth(method="lm", ylab="Shannon") + geom_point(aes(color=FSTTimeImmobile_binned)) + ylab("Shannon") + xlab("Forced Swim Test Time Immobile")
+ggplot(corr_df, aes(x=FSTTimeImmobile, y=as.matrix(Alphadiv)), ylab="Shannon") + geom_smooth(method="lm", ylab="Shannon") + geom_point(aes(color=FSTTimeImmobile)) + ylab("Shannon") + xlab("Forced Swim Test Time Immobile")
 
 ```
 
@@ -142,6 +142,8 @@ beta_disp_tukey_result <- TukeyHSD(betadispersion, ordered=FALSE, conf.level=0.9
 
 ```{r deseq2_function, echo=FALSE}
 library("phyloseq")
+library("DESeq2")
+library("EnhancedVolcano")
 taxa_with_deseq <- function(treatdds, physeq1){ 
   sigtab <- NULL
   ##treatdds = phyloseq_to_deseq2(phyloseq_object, ~"some_covariate")
@@ -153,7 +155,11 @@ taxa_with_deseq <- function(treatdds, physeq1){
   ## Behavioral results are probably being driven by this,
   ##prevalence filter 
   res2   <- subset(res, !is.na(res$padj))
-  print(EnhancedVolcano(res2, lab=rownames(res2), x='log2FoldChange', y='pvalue') + ggtitle(""))
+  print(EnhancedVolcano(res2,
+                        lab=rownames(res2), x='log2FoldChange', y='pvalue',
+                        title="Differential Expression results", 
+                        subtitle="Specify covariate",
+                        legendPosition="right"))
   sigtab <- subset(res2, res2$padj < alpha)
   if (nrow(sigtab)>0){
     sigtab = cbind(as(sigtab, "data.frame"), as(tax_table(physeq1)[rownames(sigtab), ], "matrix"))
@@ -215,7 +221,7 @@ taxa_table_plus_metadata_genus_rare <- data.frame(cbind(data.frame(genus_table_r
 ## this is an optional chunk of code to run if you want to filter taxa for only those that are reasonably abundant. In the case below taxa that show up more than three times in more than 10% of samples will be filtered
 ## Run the chunks above to set to the default settings using a variety of 
 physeq1_filt = filter_taxa(physeq, function(x) sum(x > 3) > (0.1*length(x)), TRUE)
-phyloseq_object <- physeq1_filt
+physeq1 <- physeq1_filt
 physeq_genus <- tax_glom(physeq, taxrank="Genus")
 
 ```
