@@ -332,7 +332,7 @@ treatdds = phyloseq_to_deseq2(physeq_genus, ~Sex*Treatment)
 ## Genus level table
 Treatment_Sex_genus <- taxa_with_deseq(treatdds, physeq_genus)
 
-##plotting_taxa <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=Treatment, y=ASV191))  + geom_point(aes(color=Treatment)) + facet_grid(row=vars(Sex))
+##plotting_taxa <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=Treatment, y=ASV260))  + geom_point(aes(color=Treatment)) + facet_grid(rows=(vars(Sex))) + geom_count(aes(color=Treatment))
 ##plotting_taxa
 
 print(Treatment_Sex_genus)
