@@ -354,8 +354,8 @@ treatdds = phyloseq_to_deseq2(physeq_genus, ~FSTTimeImmobile_binned)
 FSTTimeImmobile_binned_genus <- taxa_with_deseq(treatdds, physeq_genus)
 
 print(FSTTimeImmobile_binned_genus)
-#ASVs of interest: 315, 335, 336, 407, 513
-##plotting_taxa <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=FSTTimeImmobile_binned, y=ASV264))  + geom_boxplot()
+#ASVs of interest: 275, 315, 407/481 (maybe increase in this helps with decreasing immobility time?)
+##plotting_taxa <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=FSTTimeImmobile, y=ASV275))  + geom_point(aes(color=FSTTimeImmobile_binned))
 ##plotting_taxa
 ```
 
@@ -371,9 +371,7 @@ treatdds = phyloseq_to_deseq2(physeq_genus, ~NOObjpref_binned)
 NOObjpref_binned_genus <- taxa_with_deseq(treatdds, physeq_genus)
 
 print(NOObjpref_binned_genus)
-#ASVs: 308, 323, 325, 336, 369, 374, 417, 
-## With some covariates the scores are reasonably close to each other, which could result in a very small difference between groups 1, 2, and 3, whereas the 4 group is way out. Additionally, the issue of sparsity makes it hard to determine if a particular trend is driven by a specific ASV or is just a stochastic artifact.
-## Wouldn't sparsity make correlation pretty difficult to determine with most microbiome data? At least at the level of ASV vs some covariate?
+#ASVs: 323 (pretty decent), 417
 ```
 
 ```{r ASV_by_OFCentDur1_binned, echo=FALSE}
@@ -388,7 +386,7 @@ treatdds = phyloseq_to_deseq2(physeq_genus, ~OFCentDur1_binned)
 OFCentDur1_binned_genus <- taxa_with_deseq(treatdds, physeq_genus)
 
 print(OFCentDur1_binned_genus)
-##ASVs: 336, 370, 463,  (look at binned and not binned), 
+##ASVs: 463, 
 ```
 
 ```{r ASV_by_OFTotDistDay1_binned, echo=FALSE}
@@ -403,8 +401,8 @@ treatdds = phyloseq_to_deseq2(physeq_genus, ~OFTotDistDay1_binned)
 OFTotDistDay1_binned_genus <- taxa_with_deseq(treatdds, physeq_genus)
 
 print(OFTotDistDay1_binned_genus)
-##ASVs: 316 (consider binned vs non, this illustrates the difficulty of making inferences driven by a single point)
-##One pattern that could emerge is that simply having a higher bacterial load might be associated with higher scores on some behavioral assays, perhaps this is independent of a particular taxa and has to do with immune function related to taxa
+##ASVs: 
+##Genera: Mycoplasma looks to be associated with many different samples in the first quartile.
 ## I would be interested to see if there are any taxa that covary with measured BDNF levels, as that might be an interesting possible mechanistic focus
 ```
 
