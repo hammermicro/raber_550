@@ -315,6 +315,10 @@ treatdds = phyloseq_to_deseq2(physeq_genus, ~Sex)
 ## Genus level table
 Sex_genus <- taxa_with_deseq(treatdds, physeq_genus)
 print(Sex_genus)
+
+## Nearly all of these show a strong sex dependent difference in abundance, take your pick if there is one that you want to show Tom
+## At the genus level all of them show differential abundance, 
+
 ```
 
 ```{r ASV_by_Treatment_interaction_Sex, echo=FALSE}
@@ -328,13 +332,14 @@ treatdds = phyloseq_to_deseq2(physeq_genus, ~Sex*Treatment)
 ## Genus level table
 Treatment_Sex_genus <- taxa_with_deseq(treatdds, physeq_genus)
 
-##plotting_taxa <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=Treatment, y=ASV191))  + geom_point(aes(color=Treatment)) + facet_grid(row=vars(Sex)) + geom_boxplot()
+##plotting_taxa <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=Treatment, y=ASV191))  + geom_point(aes(color=Treatment)) + facet_grid(row=vars(Sex))
 ##plotting_taxa
 
 print(Treatment_Sex_genus)
 ## The Turicibacter genus is expressed across the female treatments (maybe, a slight increase in the abundance), but it's almost nonexistent among males
 ##Make sure to include information on the Sex differences of particular ASVs
-##cow-plot look into this for 
+##cow-plot look into this for
+##ASVs: 157 (increase in both, but particularly strong for the females), maybe 161 (Increase among Females, decrease in males), 204 (pretty consistent for males, but the only counts for females are at the upper radiation dosage), 212 (consistent for males and females), 231/243 (maybe the strongest case for increase in both), 265 (shows a decreasing trend for females, while it's not present at all for males), 
 ```
 
 ```{r ASV_by_FSTTimeImmobile_binned, echo=FALSE}
