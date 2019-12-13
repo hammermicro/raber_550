@@ -52,16 +52,12 @@ phyloseq_object <- physeq
 ## Should maybe look at mean #ofgenera observed as a function of radiation level. Considering the low count #s post-glom with phyloseq, is this going to be descriptive or meaningful
 ##Covariates = Sex+Treatment+FSTTimeImmobile+NOObjpref+OFCentDur1+FCCuedFrzTone+OFTotDistDay1
 library("phyloseq")
-some_sample_data <- data.frame(sample_data(physeq1))
 sample_data(physeq1)$Alphadiv <- estimate_richness(physeq1, split=TRUE, measures=c("Shannon"))
 corr_df <- data.frame(sample_data(physeq1))
-aov_results <- aov(as.matrix(Alphadiv) ~ Treatment, data=corr_df)
-anova_results <- anova(aov_results)
-some_plot <- plot((as.matrix(Alphadiv))~FSTTimeImmobile, data=corr_df)
-testing_cor_adiv <- cor.test(x=corr_df$FSTTimeImmobile, y=(as.matrix(corr_df$Alphadiv)), method=c("spearman"))
+testing_cor_adiv <- cor.test(x=corr_df$PALatCross, y=(as.matrix(corr_df$Alphadiv)), method=c("kendall"))
 print(testing_cor_adiv)
 lm_testing <- lm(as.matrix(Alphadiv) ~ FSTTimeImmobile, data=corr_df)
-ggplot(corr_df, aes(x=FSTTimeImmobile, y=as.matrix(Alphadiv)), ylab="Shannon") + geom_smooth(method="lm", ylab="Shannon") + geom_point(aes(color=FSTTimeImmobile)) + ylab("Shannon") + xlab("Forced Swim Test Time Immobile")
+ggplot(corr_df, aes(x=FSTTimeImmobile, y=as.matrix(Alphadiv)), ylab="Shannon") + geom_smooth(method="lm", ylab="Shannon") + geom_point(aes(color=FSTTimeImmobile_binned)) + ylab("Shannon") + xlab("Forced Swim Test Immobility Time") + theme(legend.position = "none") 
 
 ```
 
@@ -82,7 +78,6 @@ plot(physeq_enfit)
 ```{r bray_by_Sex_Treatment, echo=FALSE}
 library("phyloseq")
 physeq1.ord <- ordinate(physeq1, "NMDS", "bray")
-sample_data(physeq1)$Treatment <- as.factor(sample_data(physeq1)$Treatment)
 physeq1.ord.plot <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Sex")
 plot(physeq1.ord.plot)
 physeq1.ord.treatment <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Treatment", title="ByTreatment")
@@ -111,10 +106,10 @@ library("phyloseq")
 library("vegan")
 set.seed(1)
 physeq1 <- rarefy_even_depth(physeq1)
-physeq1.dist <- vegdist(otu_table(physeq1), method="bray")
+physeq1.dist <- vegdist(otu_table(physeq1), method="canberra")
 sampledf <- data.frame(sample_data(physeq1))
 set.seed(1)
-perm.results.treatment <- adonis(physeq1.dist ~ Treatment*Sex, data=sampledf, permutations=5000)
+perm.results.treatment <- adonis(physeq1.dist ~ Treatment*Sex, data=sampledf, permutations=100000)
 print(perm.results.treatment)
 physeq1 <- physeq
 ```
@@ -157,8 +152,8 @@ taxa_with_deseq <- function(treatdds, physeq1){
   res2   <- subset(res, !is.na(res$padj))
   print(EnhancedVolcano(res2,
                         lab=rownames(res2), x='log2FoldChange', y='pvalue',
-                        title="Differential Expression results", 
-                        subtitle="Specify covariate",
+                        title="Differential Expression Results", 
+                        subtitle="Formula: Treatment*Sex",
                         legendPosition="right"))
   sigtab <- subset(res2, res2$padj < alpha)
   if (nrow(sigtab)>0){
@@ -401,7 +396,7 @@ treatdds = phyloseq_to_deseq2(physeq_genus, ~OFTotDistDay1_binned)
 OFTotDistDay1_binned_genus <- taxa_with_deseq(treatdds, physeq_genus)
 
 print(OFTotDistDay1_binned_genus)
-##ASVs: 
+##ASVs: 316 (not monotonic, but associated with quartiles above 1), 302 (looks better unbinned), 426, 
 ##Genera: Mycoplasma looks to be associated with many different samples in the first quartile.
 ## I would be interested to see if there are any taxa that covary with measured BDNF levels, as that might be an interesting possible mechanistic focus
 ```
@@ -418,10 +413,8 @@ treatdds = phyloseq_to_deseq2(physeq_genus, ~PALatencyDiff_binned)
 PALatencyDiff_binned_genus <- taxa_with_deseq(treatdds, physeq_genus)
 
 print(PALatencyDiff_binned_genus)
-##ASVs: 
+##ASVs: 302?, 380 (maybe? Like the latency difference of smaller quantities is associated with ASV abundance, looks better without binning), 506, 
 
-##plotting_taxa <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=PALatencyDiff, y=ASV302))  + geom_point(aes(color=Sex))
-##plotting_taxa
 ```
 
 ```{r ASV_by_PALatCross_binned, echo=FALSE}
@@ -437,7 +430,7 @@ PALatCross_binned_genus <- taxa_with_deseq(treatdds, physeq_genus)
 
 print(PALatCross_binned_genus)
 
-##ASVs: 
+##ASVs: 302 (compelling), 330 (binned/unbinned), 376, 437, 
 ```
 
 ```{r commentary}
@@ -462,13 +455,13 @@ oldstudyasv <- otu_table(physeq_s1)
 oldstudydata <- sample_data(physeq_s1)
 new_physeq_s1 <- phyloseq(oldstudytax, oldstudyasv, oldstudydata)
 new_merged_physeq <- merge_phyloseq(new_physeq_s1, (physeq))
-##new_merged_physeq <- subset_samples(new_merged_physeq, Treatment=="0")
+new_merged_physeq <- subset_samples(new_merged_physeq, Treatment=="0")
 new_merged_physeq <- tax_glom(new_merged_physeq, "Genus")
 new_merged_physeq <- rarefy_even_depth(new_merged_physeq)
 merged_df <- data.frame(sample_data(new_merged_physeq)[,1:3])
 sample_data(new_merged_physeq) <- sample_data(merged_df)
 new_physeq_ordination_merged <- ordinate(new_merged_physeq, method="NMDS", distance="jaccard")
-plot_new_merged_ordination <- plot_ordination(new_merged_physeq, new_physeq_ordination_merged, type="samples", color="Treatment", shape="Study")
+plot_new_merged_ordination <- plot_ordination(new_merged_physeq, new_physeq_ordination_merged, type="samples", color="Study", shape="Study")
 plot_new_merged_ordination
 ##merged_ordination = metaMDS(otu_table(new_merged_physeq), distance="bray", k=4, trymax=1000, data=merged_df)
 ##nmds_table = scores(merged_ordination, display="sites")
@@ -478,7 +471,7 @@ plot_new_merged_ordination
 ##PERMANOVA to show that the difference is actually frigging huge
 study_object_dist <- vegdist(otu_table(new_merged_physeq), "bray")
 set.seed(1)
-study_difference_permanova <- adonis(study_object_dist ~ Treatment, data=merged_df, permutations=5000)
+study_difference_permanova <- adonis(study_object_dist ~ Study, data=merged_df, permutations=5000)
 print(study_difference_permanova)
 ```
 
