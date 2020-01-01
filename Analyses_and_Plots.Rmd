@@ -33,7 +33,6 @@ taxa_names(physeq) <- paste0("ASV", seq(ntaxa(physeq)))
 physeq = subset_samples(physeq, sample_names(physeq) != ("93"))
 physeq = subset_samples(physeq, sample_names(physeq) != "59")
 physeq = subset_samples(physeq, sample_names(physeq) != "4") ## This sample is only subsetted because it is missing some covariate information
-cont_treatment <- sample_data(physeq)$Treatment
 ##Binning covariates that contain continuous covariates into quartiles for DESeq2 analysis downstream. This is recommended by DESeq2's author, for more information read the vignette
 sample_data(physeq)$FSTTimeImmobile_binned <- bin(sample_data(physeq)$FSTTimeImmobile, nbins=4, labels=c("first", "second", "third", "fourth"), method="content")
 sample_data(physeq)$NOObjpref_binned <- bin(sample_data(physeq)$NOObjpref, nbins=4, labels=c("first", "second", "third", "fourth"), method="content")
@@ -58,7 +57,7 @@ corr_df <- data.frame(sample_data(physeq1))
 testing_cor_adiv <- cor.test(x=corr_df$PALatCross, y=(as.matrix(corr_df$Alphadiv)), method=c("kendall"))
 print(testing_cor_adiv)
 lm_testing <- lm(as.matrix(Alphadiv) ~ FSTTimeImmobile, data=corr_df)
-ggplot(corr_df, aes(x=FSTTimeImmobile, y=as.matrix(Alphadiv)), ylab="Shannon") + geom_smooth(method="lm", ylab="Shannon") + geom_point(aes(color=FSTTimeImmobile_binned)) + ylab("Shannon") + xlab("Forced Swim Test Immobility Time") + theme(legend.position = "none") 
+FST_by_Shannon_plot <-ggplot(corr_df, aes(x=FSTTimeImmobile, y=as.matrix(Alphadiv)), ylab="Shannon") + geom_smooth(method="lm", ylab="Shannon") + geom_point(aes(color=FSTTimeImmobile)) + ylab("Shannon") + xlab("Forced Swim Test (% Time Immobile)") + theme(legend.position = "none") 
 
 ```
 
@@ -81,8 +80,8 @@ library("phyloseq")
 physeq1.ord <- ordinate(physeq1, "NMDS", "bray", trymax=500, k=3)
 physeq1.ord.plot <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Sex")
 plot(physeq1.ord.plot)
-physeq1.ord.treatment <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Treatment", shape="Sex", title="") + stat_ellipse(mapping = aes(linetype=Sex))
-plot(physeq1.ord.treatment) 
+physeq1_ord_treatment <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Treatment", shape="Sex", title="") + stat_ellipse(mapping = aes(linetype=Sex))
+plot(physeq1_ord_treatment)
 physeq1.ord.plot.treatment <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Sex_Treatment", title="BySex_Treatment")
 plot(physeq1.ord.plot.treatment)
 ```
@@ -96,7 +95,7 @@ nmds_table = scores(physeq_nmds, display="sites")
 plot(nmds_table[,1], nmds_table[,3], main="Bray-Curtis Beta-div", xlab="NMDS1", ylab="NMDS3", pch=20, col=c("slateblue3", "tomato3", "darkolivegreen", "coral4"))
 ##This shows the ordination using different NMDS axes. These can be specified by performing metaMDS on the object otu_table and specifying k=(num of NMDS axes), then using the plot_ordination function with the phyloseq object, specifying colors and shapes based on metadata you want to visualize
 physeq1.ord.plot <- plot_ordination(physeq1, physeq_nmds, type="samples", axes=c(1,3), color="Treatment", title="ByTreatment") ## + stat_ellipse(level=0.95)
-print(physeq1.ord.plot)
+physeq1.ord.plot
 physeq1 <- physeq
 
 ```
@@ -287,8 +286,6 @@ treatdds = phyloseq_to_deseq2(physeq_genus1, ~Treatment)
 Treatment_genus <- taxa_with_deseq(treatdds, physeq_genus1)
 print(Treatment_genus)
 ## ASV656 identified as significant using DESeq2 at the genus level, occurs more frequently and in increased abundance across samples at radiation levels under 50cGy, but its abundance and presence is markedly lower at 200cGy (p-value ~0.02)
-##plotting_taxa <- ggplot(taxa_table_plus_metadata_genus_rare, aes(x=(Treatment), y=ASV656))  + geom_smooth() + geom_jitter()
-##plotting_taxa
 
 ##plotting_taxa <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=Treatment, y=ASV231))  + geom_point(aes(color=Treatment))
 ##plotting_taxa
@@ -332,9 +329,8 @@ Treatment_Sex_genus <- taxa_with_deseq(treatdds, physeq_genus)
 ##plotting_taxa
 
 taxa_hist <- ggplot(data=taxa_table_plus_metadata_asv_rare, aes(ASV231, stat(count))) +
-  geom_histogram(aes(fill=I("lightgrey"), col=I("white")), bins = 5) +
+  geom_histogram(aes(fill=I("lightgrey"), col=I("white")), bins = 4) +
   theme_bw() +
-  stat_count(geom='line') +
   xlab("ASV231 (Rarefied Abundance)") +
   facet_grid(vars(Treatment))
 taxa_hist
@@ -358,7 +354,7 @@ treatdds = phyloseq_to_deseq2(physeq_genus, ~FSTTimeImmobile_binned)
 FSTTimeImmobile_binned_genus <- taxa_with_deseq(treatdds, physeq_genus)
 
 print(FSTTimeImmobile_binned_genus)
-#ASVs of interest: 275, 315, 407/481 (maybe increase in this helps with decreasing immobility time?)
+#ASVs of interest: 275, 315 (this might work, but it looks like it decreases with quartile), 407/481 (maybe increase in this helps with decreasing immobility time?)
 ##plotting_taxa <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=FSTTimeImmobile, y=ASV275))  + geom_point(aes(color=FSTTimeImmobile_binned))
 ##plotting_taxa
 ```
@@ -390,7 +386,7 @@ treatdds = phyloseq_to_deseq2(physeq_genus, ~OFCentDur1_binned)
 OFCentDur1_binned_genus <- taxa_with_deseq(treatdds, physeq_genus)
 
 print(OFCentDur1_binned_genus)
-##ASVs: 463, 
+##ASVs: 463, (this is one for consideration)
 ```
 
 ```{r ASV_by_OFTotDistDay1_binned, echo=FALSE}
@@ -484,7 +480,12 @@ study_difference_permanova <- adonis(study_object_dist ~ Study, data=merged_df, 
 print(study_difference_permanova)
 ```
 
+```{r combining_figures}
+library(gridExtra)
+multi_figure <- grid.arrange(FST_by_Shannon_plot, physeq1_ord_treatment, taxa_hist, taxa_hist)
 
+
+```
 
 
 
