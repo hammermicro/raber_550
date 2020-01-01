@@ -21,10 +21,9 @@ library("OneR")
 ##All of the main business goes on here. There's information to create a phyloseq object, calculate alpha diversity and measure the association with covariates, quantify beta diversity and create ordinations, and use DESeq2 for analysis of taxa. For questions about anything that goes on here, feel free to ask.
 
 ##Reads in the ASV table, the taxa table, and the sample metadata
-seqtab <- readRDS("C:/Users/hammera/Desktop/raber_550/data/reads_290190_seqtab_final.rds")
-seqtab_taxa <- readRDS("C:/Users/hammera/Desktop/raber_550/data/reads_290190_taxa_final.rds")
-seqtab <- (seqtab)
-meta_data <- as.data.frame(read_excel("C:/Users/hammera/Desktop/raber_550/data/550_metadata_revised.xlsx"))
+seqtab <- readRDS("C:/Users/hammera/Desktop/raber_550/data/290190_seqtab_final.rds")
+seqtab_taxa <- readRDS("C:/Users/hammera/Desktop/raber_550/data/290190_taxa_final.rds")
+meta_data <- as.data.frame(read_excel("C:/Users/hammera/Desktop/raber_550/data/550_metadata.xlsx"))
 rownames(seqtab) <- meta_data$RaberSID
 ##Sets to values that can be used by phyloseq
 samples = sample_data(meta_data)
@@ -35,6 +34,7 @@ sample_names(samples) <- sample_names(ASV)
 physeq = phyloseq(ASV, TAX, samples)
 taxa_names(physeq) <- paste0("ASV", seq(ntaxa(physeq)))
 physeq = subset_samples(physeq, sample_names(physeq) != ("93"))
+physeq = subset_samples(physeq, !is.na(sample_data(physeq)$HCCD68))
 physeq = subset_samples(physeq, sample_names(physeq) != "59")
 physeq = subset_samples(physeq, sample_names(physeq) != "4")
 ##Binning covariates that contain continuous covariates into quartiles for DESeq2 analysis downstream. This is recommended by DESeq2's author, for more information read the vignette
@@ -45,6 +45,8 @@ sample_data(physeq)$FCCuedFrzTone_binned <- bin(sample_data(physeq)$FCCuedFrzTon
 sample_data(physeq)$OFTotDistDay1_binned <- bin(sample_data(physeq)$OFTotDistDay1, nbins=4, labels=c("first", "second", "third", "fourth"), method="content")
 sample_data(physeq)$PALatencyDiff_binned <- bin(sample_data(physeq)$PALatencyDiff, nbins=4, labels=c("first", "second", "third", "fourth"), method="content")
 sample_data(physeq)$PALatCross_binned <- bin(sample_data(physeq)$PALatCross, nbins=4, labels=c("first", "second", "third", "fourth"), method="content")
+sample_data(physeq)$HCCD68_binned <- bin(sample_data(physeq)$HCCD68, nbins=4, labels=c("first", "second", "third", "fourth"), method="content")
+sample_data(physeq)$CTXCD68_binned <- bin(sample_data(physeq)$CTXCD68, nbins=10, labels=c(seq(1:10)), method="content")
 sample_data(physeq)$Treatment <- factor(sample_data(physeq)$Treatment)
 ##Setting a couple of variables equal to physeq. Vars will be modified and updated later on
 physeq1 <- physeq
@@ -111,7 +113,7 @@ taxa_with_deseq <- function(treatdds, physeq1){
 
 ```{r ASV_by_Treatment, echo=FALSE}
 ## Convert to deseq2 object using the specified covariate
-treatdds = phyloseq_to_deseq2(phyloseq_object, ~Treatment)
+treatdds = phyloseq_to_deseq2(physeq1, ~Treatment)
 ## Generated table containing ASVs
 Treatment_ASVs <- taxa_with_deseq(treatdds, physeq1)
 print(Treatment_ASVs)
@@ -122,6 +124,64 @@ Treatment_genus <- taxa_with_deseq(treatdds, physeq_genus)
 print(Treatment_genus)
 
 ```
+
+```{r ASV_by_HCCD68, echo=FALSE}
+## Convert to deseq2 object using the specified covariate
+HCCD68_dds = phyloseq_to_deseq2(physeq1, ~HCCD68)
+## Generated table containing ASVs
+HCCD68_ASVs <- taxa_with_deseq(HCCD68_dds, physeq1)
+print(HCCD68_ASVs)
+## DESeq2 analysis using Treatment
+HCCD68_genus_dds = phyloseq_to_deseq2(physeq_genus, ~HCCD68)
+## Genus level table
+HCCD68_genus <- taxa_with_deseq(HCCD68_genus_dds, physeq_genus)
+print(HCCD68_genus)
+
+```
+
+```{r ASV_by_HCCD68_binned, echo=FALSE}
+## Convert to deseq2 object using the specified covariate
+HCCD68_binned_dds = phyloseq_to_deseq2(physeq1, ~HCCD68_binned)
+## Generated table containing ASVs
+HCCD68_binned_ASVs <- taxa_with_deseq(HCCD68_binned_dds, physeq1)
+print(HCCD68_binned_ASVs)
+## DESeq2 analysis using Treatment
+HCCD68_binned_genus_dds = phyloseq_to_deseq2(physeq_genus, ~HCCD68_binned)
+## Genus level table
+HCCD68_binned_genus <- taxa_with_deseq(HCCD68_binned_genus_dds, physeq_genus)
+print(HCCD68_binned_genus)
+
+```
+
+```{r ASV_by_CTXCD68, echo=FALSE}
+## Convert to deseq2 object using the specified covariate
+CTXCD68_dds = phyloseq_to_deseq2(physeq1, ~CTXCD68)
+## Generated table containing ASVs
+CTXCD68_ASVs <- taxa_with_deseq(CTXCD68_dds, physeq1)
+print(CTXCD68_ASVs)
+## DESeq2 analysis using Treatment
+CTXCD68_genus_dds = phyloseq_to_deseq2(physeq_genus, ~CTXCD68)
+## Genus level table
+CTXCD68_genus <- taxa_with_deseq(CTXCD68_genus_dds, physeq_genus)
+print(CTXCD68_genus)
+
+```
+
+```{r ASV_by_CTXCD68_binned, echo=FALSE}
+## Convert to deseq2 object using the specified covariate
+CTXCD68_binned_dds = phyloseq_to_deseq2(physeq1, ~CTXCD68_binned)
+## Generated table containing ASVs
+CTXCD68_binned_ASVs <- taxa_with_deseq(CTXCD68_binned_dds, physeq1)
+print(CTXCD68_binned_ASVs)
+## DESeq2 analysis using Treatment
+CTXCD68_binned_genus_dds = phyloseq_to_deseq2(physeq_genus, ~CTXCD68_binned)
+## Genus level table
+CTXCD68_binned_genus <- taxa_with_deseq(CTXCD68_binned_genus_dds, physeq_genus)
+print(CTXCD68_binned_genus)
+
+```
+
+
 
 ```{r DESeq2_Sex_by_Treatment, echo=FALSE, include=FALSE}
 ##For the interaction of Treatment and Sex
@@ -135,11 +195,20 @@ dds_genus_Treat_Sex = phyloseq_to_deseq2(physeq_genus, ~Sex*Treatment)
 ## Genus level table
 Treatment_Sex_genus <- taxa_with_deseq(dds_genus_Treat_Sex, physeq_genus)
 print(Treatment_Sex_genus)
-##Some real wizard shit is going on here
 ```
 
 ```{r alpha_diversity, echo=TRUE}
 ##Alpha diversity is a metric that describes the diversity of taxa in a specific sample or set. Alpha diversity measures did not differ significantly between treatment groups, and no association between alpha diversity and radiation level was detected. However, FSTTimeImmobile times were associated with alpha diversity (alpha diversity metric "Shannon", Kendall's tau, p-value=0.03692).
+
+p_val_vect <- NULL
+col_names_vec <- colnames(taxa_table_plus_metadata_asv_rare)
+for (i in 1:3226){
+  corr_value <- NULL
+  corr_value <- cor.test(taxa_table_plus_metadata_asv_rare$CTXCD68, taxa_table_plus_metadata_asv_rare[,i], method="kendall")
+  p_val_vect <- append(p_val_vect, corr_value[["p.value"]])
+}
+p_val_vect <- p.adjust(p_val_vect, "fdr")
+
 ```
 
 ```{r Ordination_Sex_Treatment, echo=TRUE}
@@ -156,19 +225,10 @@ plot(physeq2.ord.treatment)
 ```{r taxa, echo=TRUE}
 ## There were associations between covariates of interest and taxa. DESeq2 was used to analyze the association between bacterial taxa and several covariates at the genus and species (ASV) level. The abundance of some taxa associated with the level of radiation exposure as a function of host sex. This was observed for the Bacteroides and Turicibacter genera, where an increased abundance was associated with higher radiation exposure in female mice but not in male mice. An increase in the both genera has previously been observed in radiation-induced gut dysbiosis and inflammation (https://gut.bmj.com/content/67/1/97).
 ##print(Treatment_Sex_ASVs)
+
 ##print(Treatment_Sex_genus)
-plotting_ASV231 <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=Treatment, y=ASV231)) + geom_jitter() + geom_smooth(method="auto")
-plotting_ASV231
-plotting_ASV305 <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=(Treatment), y=ASV305)) + geom_jitter() + geom_smooth(method="auto")
-plotting_ASV305
-plotting_ASV324 <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=(Treatment), y=ASV324)) + geom_jitter() + geom_smooth(method="auto")
-plotting_ASV324
-plotting_ASV356 <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=(Treatment), y=ASV356)) + geom_jitter() + geom_smooth(method="auto")
-plotting_ASV356
-plotting_ASV377 <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=(Treatment), y=ASV377)) + geom_jitter() + geom_smooth(method="auto")
-plotting_ASV377
-plotting_ASV411 <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=(Treatment), y=ASV411)) + geom_jitter() + geom_smooth(method="auto")
-plotting_ASV411
+
+
 ##Note to Tom, PALatCross shows a somewhat large number of taxa where the fold change is associated with scores. That said, many of them are low abundance, so plot a few out and see what happens.
 ```
 
