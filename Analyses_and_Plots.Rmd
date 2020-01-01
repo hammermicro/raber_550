@@ -371,7 +371,7 @@ treatdds = phyloseq_to_deseq2(physeq_genus, ~NOObjpref_binned)
 NOObjpref_binned_genus <- taxa_with_deseq(treatdds, physeq_genus)
 
 print(NOObjpref_binned_genus)
-#ASVs: 323 (pretty decent), 417
+#ASVs: 323 (pretty decent with geom_point), 417 (this might work)
 ```
 
 ```{r ASV_by_OFCentDur1_binned, echo=FALSE}
@@ -401,7 +401,7 @@ treatdds = phyloseq_to_deseq2(physeq_genus, ~OFTotDistDay1_binned)
 OFTotDistDay1_binned_genus <- taxa_with_deseq(treatdds, physeq_genus)
 
 print(OFTotDistDay1_binned_genus)
-##ASVs: 316 (not monotonic, but associated with quartiles above 1), 302 (looks better unbinned), 426, 
+##ASVs: 316 (compelling, bin=4), 302 (looks better unbinned), 426, 
 ##Genera: Mycoplasma looks to be associated with many different samples in the first quartile.
 ## I would be interested to see if there are any taxa that covary with measured BDNF levels, as that might be an interesting possible mechanistic focus
 ```
@@ -448,7 +448,7 @@ print(PALatCross_binned_genus)
 ## Of note, fewer taxa were shown to be significant after changing the parameters above
 ```
 
-```{r merging_physeq_objects}
+```{r merging_study_objects}
 ##You need to remove the tree from physeq_s1 because it messes up the merging of physeq objects
 set.seed(1)
 physeq_s1 <- readRDS("C:/Users/hammera/Desktop/raber_550/data/three-beam_physeq.rds")
@@ -483,15 +483,21 @@ print(study_difference_permanova)
 ```{r combining_figures}
 library(gridExtra)
 multi_figure <- grid.arrange(FST_by_Shannon_plot, physeq1_ord_treatment, taxa_hist, taxa_hist)
+```
+
+```{r taxa_list}
+
+##FSTTimeImmobile - ASV315 (bin=4)
+##NOObjpref - ASV417 (bin=3|4)
+##OFTotDistDay1 - ASV316 (bin=4)
+##PALatencyDiff - ASV302 (bin=4), ASV506 (bin=3|4)
+##PALatCross = ASV302 (bin=3|4), ASV437 (a bit weak)
+##
+
+
 
 
 ```
-
-
-
-
-
-
 
 
 
