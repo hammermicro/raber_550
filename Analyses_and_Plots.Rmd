@@ -45,6 +45,8 @@ sample_data(physeq)$Treatment <- factor(sample_data(physeq)$Treatment)
 ##Setting a couple of variables equal to physeq. Vars will be modified and updated later on
 physeq1 <- physeq
 phyloseq_object <- physeq
+set.seed(1)
+physeq2 <- rarefy_even_depth(physeq1)
 ```
 
 ```{r alphadiv, echo=FALSE}
@@ -106,10 +108,10 @@ library("phyloseq")
 library("vegan")
 set.seed(1)
 physeq1 <- rarefy_even_depth(physeq1)
-physeq1.dist <- vegdist(otu_table(physeq1), method="canberra")
+physeq1.dist <- vegdist(otu_table(physeq1), method="bray")
 sampledf <- data.frame(sample_data(physeq1))
 set.seed(1)
-perm.results.treatment <- adonis(physeq1.dist ~ Treatment*Sex, data=sampledf, permutations=5000)
+perm.results.treatment <- adonis(physeq1.dist ~ Treatment:Sex, data=sampledf, permutations=5000)
 print(perm.results.treatment)
 physeq1 <- physeq
 ```
@@ -126,8 +128,7 @@ print(mod)
 ```{r betadispersion, echo=FALSE}
 ## The graphical results of this suggest that there might be a difference in mean betadispersion, with particularly low dispersion among the highly radiated groups. Is lower betadispersion associated with higher radiation levels? Would that suggest that there are more relatively limited conformations adopted by the murine gut microbiome in association with radiation?
 ## Do I need to correct for multiple pairwise comparisons?
-treatments <- factor(sample_data(physeq1)$Treatment)
-betadispersion <- betadisper(physeq1.dist, treatments, type=c("centroid"))
+betadispersion <- betadisper(physeq1.dist, sample_data(physeq1)$Treatment, type=c("centroid"))
 boxplot(betadispersion)
 set.seed(1)
 testbetad <- permutest(betadispersion, pairwise=TRUE, permutations=5000)
@@ -328,12 +329,12 @@ Treatment_Sex_genus <- taxa_with_deseq(treatdds, physeq_genus)
 ##plotting_taxa <- ggplot(taxa_table_plus_metadata_asv_rare, aes(x=Treatment, y=ASV260))  + geom_point(aes(color=Treatment)) + facet_grid(rows=(vars(Sex))) + geom_count(aes(color=Treatment))
 ##plotting_taxa
 
-taxa_hist <- ggplot(data=taxa_table_plus_metadata_asv_rare, aes(ASV231, stat(count))) +
+taxa_hist_treatment <- ggplot(data=taxa_table_plus_metadata_asv_rare, aes(ASV231, stat(count))) +
   geom_histogram(aes(fill=I("lightgrey"), col=I("white")), bins = 4) +
   theme_bw() +
   xlab("ASV231 (Rarefied Abundance)") +
   facet_grid(vars(Treatment))
-taxa_hist
+taxa_hist_treatment
 
 print(Treatment_Sex_genus)
 ## The Turicibacter genus is expressed across the female treatments (maybe, a slight increase in the abundance), but it's almost nonexistent among males
@@ -482,20 +483,17 @@ print(study_difference_permanova)
 
 ```{r combining_figures}
 library(gridExtra)
-multi_figure <- grid.arrange(FST_by_Shannon_plot, physeq1_ord_treatment, taxa_hist, taxa_hist)
+multi_figure <- grid.arrange(FST_by_Shannon_plot, physeq1_ord_treatment, taxa_hist_treatment, taxa_hist)
 ```
 
 ```{r taxa_list}
 
-##FSTTimeImmobile - ASV315 (bin=4)
-##NOObjpref - ASV417 (bin=3|4)
-##OFTotDistDay1 - ASV316 (bin=4)
-##PALatencyDiff - ASV302 (bin=4), ASV506 (bin=3|4)
-##PALatCross = ASV302 (bin=3|4), ASV437 (a bit weak)
-##
-
-
-
+##FSTTimeImmobile - ASV315 (bin=4, Muribaculaceae)
+##NOObjpref - ASV417 (bin=3|4, Desulfovibrio)
+##OFTotDistDay1 - ASV316 (bin=4, Muribaculaceae)
+##PALatencyDiff - ASV302 (bin=4, Muribaculaceae), ASV506 (bin=3|4, Alistipes)
+##PALatCross - ASV302 (bin=3|4, Muribaculaceae), ASV437 (a bit weak)
+##HCCD68 - ASV163(bin=5), 
 
 ```
 
