@@ -41,6 +41,7 @@ sample_data(physeq)$FCCuedFrzTone_binned <- bin(sample_data(physeq)$FCCuedFrzTon
 sample_data(physeq)$OFTotDistDay1_binned <- bin(sample_data(physeq)$OFTotDistDay1, nbins=4, labels=c("first", "second", "third", "fourth"), method="content")
 sample_data(physeq)$PALatencyDiff_binned <- bin(sample_data(physeq)$PALatencyDiff, nbins=4, labels=c("first", "second", "third", "fourth"), method="content")
 sample_data(physeq)$PALatCross_binned <- bin(sample_data(physeq)$PALatCross, nbins=4, labels=c("first", "second", "third", "fourth"), method="content")
+cont_treatment <- sample_data(physeq)$Treatment
 sample_data(physeq)$Treatment <- factor(sample_data(physeq)$Treatment)
 ##Setting a couple of variables equal to physeq. Vars will be modified and updated later on
 physeq1 <- physeq
@@ -453,20 +454,22 @@ print(PALatCross_binned_genus)
 ##You need to remove the tree from physeq_s1 because it messes up the merging of physeq objects
 set.seed(1)
 physeq_s1 <- readRDS("C:/Users/hammera/Desktop/raber_550/data/three-beam_physeq.rds")
-sample_data(physeq_s1)$Treatment <- factor(sample_data(physeq_s1_genus)$Radiation.Conc.cGy)
 sample_data(physeq_s1)$Study <- "Three-beam"
+sample_data(physeq_s1)$Treatment <- sample_data(physeq_s1)$Radiation.Conc.cGy
+factor(sample_data(physeq_s1_genus)$Radiation.Conc.cGy)
 sample_data(physeq)$Study <- "Six-beam"
+sample_data(physeq)$Treatment <- cont_treatment
 oldstudytax <- tax_table(physeq_s1)
 oldstudyasv <- otu_table(physeq_s1)
 oldstudydata <- sample_data(physeq_s1)
 new_physeq_s1 <- phyloseq(oldstudytax, oldstudyasv, oldstudydata)
-new_merged_physeq <- merge_phyloseq(new_physeq_s1, (physeq))
+new_merged_physeq <- merge_phyloseq(new_physeq_s1, physeq)
 new_merged_physeq <- subset_samples(new_merged_physeq, Treatment=="0")
 new_merged_physeq <- tax_glom(new_merged_physeq, "Genus")
 new_merged_physeq <- rarefy_even_depth(new_merged_physeq)
 merged_df <- data.frame(sample_data(new_merged_physeq)[,1:3])
 sample_data(new_merged_physeq) <- sample_data(merged_df)
-new_physeq_ordination_merged <- ordinate(new_merged_physeq, method="NMDS", distance="jaccard")
+new_physeq_ordination_merged <- ordinate(new_merged_physeq, method="NMDS", distance="bray")
 plot_new_merged_ordination <- plot_ordination(new_merged_physeq, new_physeq_ordination_merged, type="samples", color="Study", shape="Study")
 plot_new_merged_ordination
 ##merged_ordination = metaMDS(otu_table(new_merged_physeq), distance="bray", k=4, trymax=1000, data=merged_df)
