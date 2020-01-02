@@ -46,7 +46,7 @@ sample_data(physeq)$OFTotDistDay1_binned <- bin(sample_data(physeq)$OFTotDistDay
 sample_data(physeq)$PALatencyDiff_binned <- bin(sample_data(physeq)$PALatencyDiff, nbins=4, labels=c("first", "second", "third", "fourth"), method="content")
 sample_data(physeq)$PALatCross_binned <- bin(sample_data(physeq)$PALatCross, nbins=4, labels=c("first", "second", "third", "fourth"), method="content")
 sample_data(physeq)$HCCD68_binned <- bin(sample_data(physeq)$HCCD68, nbins=4, labels=c("first", "second", "third", "fourth"), method="content")
-sample_data(physeq)$CTXCD68_binned <- bin(sample_data(physeq)$CTXCD68, nbins=10, labels=c(seq(1:10)), method="content")
+sample_data(physeq)$CTXCD68_binned <- bin(sample_data(physeq)$CTXCD68, nbins=4, labels=c("first", "second", "third", "fourth"), method="content")
 sample_data(physeq)$Treatment <- factor(sample_data(physeq)$Treatment)
 ##Setting a couple of variables equal to physeq. Vars will be modified and updated later on
 physeq1 <- physeq
