@@ -70,37 +70,30 @@ library("vegan")
 treatment.env <- data.frame(sample_data(physeq1))
 physeq1.rda <- rda(otu_table(physeq1)~Sex+Treatment+FSTTimeImmobile+NOObjpref+OFCentDur1+FCCuedFrzTone+OFTotDistDay1, data=treatment.env)
 physeq1.enfit <- envfit(physeq1.rda~Sex+Treatment+FSTTimeImmobile+NOObjpref+OFCentDur1+FCCuedFrzTone+OFTotDistDay1, data=(treatment.env), perm=5000)
-plot(physeq1.rda, type="t")
 physeq_ordination <- decorana(data.frame(otu_table(physeq1)))
 physeq_enfit <- envfit(physeq_ordination~Treatment*Sex+FSTTimeImmobile+NOObjpref+OFCentDur1+FCCuedFrzTone+OFTotDistDay1, data=treatment.env, perm=1000)
-plot(physeq_ordination)
-plot(physeq_enfit)
-#plot(physeq1.enfit)
 ```
 
 ```{r bray_by_Sex_Treatment, echo=FALSE}
 library("phyloseq")
 physeq1.ord <- ordinate(physeq1, "NMDS", "bray", trymax=500, k=3)
 physeq1.ord.plot <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Sex")
-plot(physeq1.ord.plot)
+#plot(physeq1.ord.plot)
 physeq1_ord_treatment <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Treatment", shape="Sex", title="") + stat_ellipse(mapping = aes(linetype=Sex))
-plot(physeq1_ord_treatment)
+#plot(physeq1_ord_treatment)
 physeq1.ord.plot.treatment <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Sex_Treatment", title="BySex_Treatment")
-plot(physeq1.ord.plot.treatment)
+#plot(physeq1.ord.plot.treatment)
 ```
 
 ```{r nmds_different_axes, echo=FALSE}
 library(ggplot2)
 set.seed(1)
-physeq1 <- rarefy_even_depth(physeq1, rngseed=TRUE, verbose=FALSE)
-physeq_nmds = metaMDS(otu_table(physeq1), distance="jaccard", k=3, trymax=500, data=treatment.env)
+physeq_nmds = metaMDS(otu_table(physeq2), distance="jaccard", k=3, trymax=500, data=treatment.env, verbose=FALSE)
 nmds_table = scores(physeq_nmds, display="sites")
-plot(nmds_table[,1], nmds_table[,3], main="Bray-Curtis Beta-div", xlab="NMDS1", ylab="NMDS3", pch=20, col=c("slateblue3", "tomato3", "darkolivegreen", "coral4"))
+##plot(nmds_table[,1], nmds_table[,3], main="Bray-Curtis Beta-div", xlab="NMDS1", ylab="NMDS3", pch=20, col=c("slateblue3", "tomato3", "darkolivegreen", "coral4"))
 ##This shows the ordination using different NMDS axes. These can be specified by performing metaMDS on the object otu_table and specifying k=(num of NMDS axes), then using the plot_ordination function with the phyloseq object, specifying colors and shapes based on metadata you want to visualize
-physeq1.ord.plot <- plot_ordination(physeq1, physeq_nmds, type="samples", axes=c(1,3), color="Treatment", title="ByTreatment") ## + stat_ellipse(level=0.95)
-physeq1.ord.plot
-physeq1 <- physeq
-
+physeq1.ord.plot <- plot_ordination(physeq2, physeq_nmds, type="samples", axes=c(1,3), color="Treatment", title="ByTreatment") ## + stat_ellipse(level=0.95)
+#physeq1.ord.plot
 ```
 
 ```{r adonis_results, echo=FALSE}
@@ -108,9 +101,8 @@ physeq1 <- physeq
 library("phyloseq")
 library("vegan")
 set.seed(1)
-physeq1 <- rarefy_even_depth(physeq1)
-physeq1.dist <- vegdist(otu_table(physeq1), method="bray")
-sampledf <- data.frame(sample_data(physeq1))
+physeq1.dist <- vegdist(otu_table(physeq2), method="bray")
+sampledf <- data.frame(sample_data(physeq2))
 set.seed(1)
 perm.results.treatment <- adonis(physeq1.dist ~ Treatment:Sex, data=sampledf, permutations=5000)
 print(perm.results.treatment)
@@ -133,7 +125,7 @@ betadispersion <- betadisper(physeq1.dist, sample_data(physeq1)$Treatment, type=
 boxplot(betadispersion)
 set.seed(1)
 testbetad <- permutest(betadispersion, pairwise=TRUE, permutations=5000)
-print(testbetad)
+##print(testbetad)
 beta_disp_tukey_result <- TukeyHSD(betadispersion, ordered=FALSE, conf.level=0.95)
 ```
 
@@ -148,15 +140,12 @@ taxa_with_deseq <- function(treatdds, physeq1){
   res = results(treatdds.deseq, cooksCutoff=TRUE)
   res = data.frame(res)
   alpha = 0.001
-  ##Make a note of sfType -poscounts and fitType = local - This should decrease the likelihood that a single outlier drives the observation
-  ## Behavioral results are probably being driven by this,
-  ##prevalence filter 
   res2   <- subset(res, !is.na(res$padj))
-  print(EnhancedVolcano(res2,
-                        lab=rownames(res2), x='log2FoldChange', y='pvalue',
-                        title="Differential Expression Results", 
-                        subtitle="Formula: Treatment*Sex",
-                        legendPosition="right"))
+# print(EnhancedVolcano(res2,
+#                       lab=rownames(res2), x='log2FoldChange', y='pvalue',
+#                       title="Differential Expression Results", 
+#                       subtitle="Formula: Treatment*Sex",
+#                       legendPosition="right"))
   sigtab <- subset(res2, res2$padj < alpha)
   if (nrow(sigtab)>0){
     sigtab = cbind(as(sigtab, "data.frame"), as(tax_table(physeq1)[rownames(sigtab), ], "matrix"))
@@ -283,9 +272,9 @@ treatdds = phyloseq_to_deseq2(physeq1, ~Treatment)
 Treatment_ASVs <- taxa_with_deseq(treatdds, physeq1)
 print(Treatment_ASVs)
 ## DESeq2 analysis using Treatment
-treatdds = phyloseq_to_deseq2(physeq_genus1, ~Treatment)
+treatdds = phyloseq_to_deseq2(physeq_genus, ~Treatment)
 ## Genus level table
-Treatment_genus <- taxa_with_deseq(treatdds, physeq_genus1)
+Treatment_genus <- taxa_with_deseq(treatdds, physeq_genus)
 print(Treatment_genus)
 ## ASV656 identified as significant using DESeq2 at the genus level, occurs more frequently and in increased abundance across samples at radiation levels under 50cGy, but its abundance and presence is markedly lower at 200cGy (p-value ~0.02)
 
@@ -444,10 +433,6 @@ print(PALatCross_binned_genus)
 ##Alpha diversity is a metric that describes the diversity of taxa in a specific sample or set. Alpha diversity measures did not differ significantly between treatment groups, and no association between alpha diversity and radiation level was detected. However, FSTTimeImmobile times were associated with alpha diversity (alpha diversity metric "Shannon", Kendall's tau, p-value=0.03692).
 ##Beta diversity is an estimate of diversity between different samples. Beta diversity was first estimated using the Bray-Curtis dissimilarity index, and a NMDS ordination was created. From this information, an analog to step-wise AIC was used to elucidate the best model for predicting differences in beta-diversity. PERMANOVA was performed using Treatment x Sex to quantify the difference in beta diversity between samples. The results of this test suggest that the composition of the gut changes in response to Treatment interacting with Sex (p-value ~0.0006, R2~0.041). No other covariates significantly associated with beta diversity.
 ##There were associations between covariates of interest and taxa. DESeq2 was used to analyze the association between bacterial taxa and several covariates at the genus and species (ASV) level. The abundance of some taxa associated with the level of radiation exposure as a function of host sex. This was observed for the Bacteroides and Turicibacter genera, where an increased abundance was associated with higher radiation exposure in female mice but not in male mice. An increase in the both genera has previously been observed in radiation-induced gut dysbiosis and inflammation (https://gut.bmj.com/content/67/1/97).
-
-
-
-## Of note, fewer taxa were shown to be significant after changing the parameters above
 ```
 
 ```{r merging_study_objects}
@@ -456,7 +441,7 @@ set.seed(1)
 physeq_s1 <- readRDS("C:/Users/hammera/Desktop/raber_550/data/three-beam_physeq.rds")
 sample_data(physeq_s1)$Study <- "Three-beam"
 sample_data(physeq_s1)$Treatment <- sample_data(physeq_s1)$Radiation.Conc.cGy
-factor(sample_data(physeq_s1_genus)$Radiation.Conc.cGy)
+##factor(sample_data(physeq_s1_genus)$Radiation.Conc.cGy)
 sample_data(physeq)$Study <- "Six-beam"
 sample_data(physeq)$Treatment <- cont_treatment
 oldstudytax <- tax_table(physeq_s1)
@@ -500,13 +485,29 @@ multi_figure <- grid.arrange(FST_by_Shannon_plot, physeq1_ord_treatment, taxa_hi
 
 ```
 
+```{r table_formatting}
+OFTotDistDay1_table <- OFTotDistDay1_binned_ASVs %>% dplyr::mutate(covariate = "Open Field Total Time in Center") %>% select(Family, Genus, covariate, pvalue, padj)
+PALatCross_table <- PALatCross_binned_ASVs %>% dplyr::mutate(covariate = "Passive Avoidance Latency to Cross") %>% select(Family, Genus, covariate, pvalue, padj)
+PALatencyDiff_table <- PALatencyDiff_binned_ASVs %>% dplyr::mutate(covariate = "Passive Avoidance Learning Test") %>% select(Family, Genus, covariate, pvalue, padj)
+OFCentDur1_table <- OFCentDur1_binned_ASVs %>% dplyr::mutate(covariate = "Open Field Time Spent in Center") %>% select(Family, Genus, covariate, pvalue, padj)
+NOObjpref_table <- NOObjpref_binned_ASVs %>% dplyr::mutate(covariate = "Novel Object Recognition Test") %>% select(Family, Genus, covariate, pvalue, padj)
+FSTTimeImmobile_table <- FSTTimeImmobile_binned_ASVs %>% dplyr::mutate(covariate = "Forced Swim Test % Time Immobile") %>% select(Family, Genus, covariate, pvalue, padj)
 
+par(mfrow=c(6,1))
+OFTotDistDay1_table
+PALatCross_table
+PALatencyDiff_table
+OFCentDur1_table
+NOObjpref_table
+FSTTimeImmobile_table
 
-
-
-
-
-
+multi_figure <- grid.arrange(OFTotDistDay1_table,
+PALatCross_table,
+PALatencyDiff_table,
+OFCentDur1_table,
+NOObjpref_table,
+FSTTimeImmobile_table)
+```
 
 
 
