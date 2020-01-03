@@ -501,12 +501,6 @@ OFCentDur1_table
 NOObjpref_table
 FSTTimeImmobile_table
 
-multi_figure <- grid.arrange(OFTotDistDay1_table,
-PALatCross_table,
-PALatencyDiff_table,
-OFCentDur1_table,
-NOObjpref_table,
-FSTTimeImmobile_table)
 ```
 
 
