@@ -493,6 +493,13 @@ OFCentDur1_table <- OFCentDur1_binned_ASVs %>% dplyr::mutate(covariate = "Open F
 NOObjpref_table <- NOObjpref_binned_ASVs %>% dplyr::mutate(covariate = "Novel Object Recognition Test") %>% select(Family, Genus, covariate, pvalue, padj)
 FSTTimeImmobile_table <- FSTTimeImmobile_binned_ASVs %>% dplyr::mutate(covariate = "Forced Swim Test % Time Immobile") %>% select(Family, Genus, covariate, pvalue, padj)
 
+rownames(OFTotDistDay1_table) <- rownames(OFTotDistDay1_binned_ASVs)
+rownames(PALatCross_table) <- rownames(PALatCross_binned_ASVs)
+rownames(PALatencyDiff_table) <- rownames(PALatencyDiff_binned_ASVs)
+rownames(OFCentDur1_table) <- rownames(OFCentDur1_binned_ASVs)
+rownames(NOObjpref_table) <- rownames(NOObjpref_binned_ASVs)
+rownames(FSTTimeImmobile_table) <- rownames(FSTTimeImmobile_binned_ASVs)
+
 par(mfrow=c(6,1))
 OFTotDistDay1_table
 PALatCross_table
@@ -500,6 +507,7 @@ PALatencyDiff_table
 OFCentDur1_table
 NOObjpref_table
 FSTTimeImmobile_table
+
 
 ```
 
