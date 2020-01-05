@@ -271,6 +271,7 @@ treatdds = phyloseq_to_deseq2(physeq1, ~Treatment)
 ## Generated table containing ASVs
 Treatment_ASVs <- taxa_with_deseq(treatdds, physeq1)
 print(Treatment_ASVs)
+
 ## DESeq2 analysis using Treatment
 treatdds = phyloseq_to_deseq2(physeq_genus, ~Treatment)
 ## Genus level table
@@ -323,6 +324,7 @@ taxa_hist_treatment <- ggplot(data=taxa_table_plus_metadata_asv_rare, aes(ASV231
   geom_histogram(aes(fill=I("lightgrey"), col=I("white")), bins = 4) +
   theme_bw() +
   xlab("ASV231 (Rarefied Abundance)") +
+  ggtitle("Treatment") +
   facet_grid(vars(Treatment))
 taxa_hist_treatment
 
@@ -477,11 +479,67 @@ multi_figure <- grid.arrange(FST_by_Shannon_plot, physeq1_ord_treatment, taxa_hi
 ```{r taxa_list}
 
 ##FSTTimeImmobile - ASV315 (bin=4, Muribaculaceae)
+taxa_FSTTimeImmobile <- ggplot(data=taxa_table_plus_metadata_asv_rare, aes(ASV315, stat(count))) +
+  geom_histogram(aes(fill=I("lightgrey"), col=I("white")), bins = 4) +
+  theme_bw() +
+  ggtitle("FSTTimeImmobile") +
+  xlab("ASV315 (Rarefied Abundance)") +
+  facet_grid(vars(FSTTimeImmobile_binned))
+taxa_FSTTimeImmobile
+
 ##NOObjpref - ASV417 (bin=3|4, Desulfovibrio)
+taxa_NOObjpref <- ggplot(data=taxa_table_plus_metadata_asv_rare, aes(ASV417, stat(count))) +
+  geom_histogram(aes(fill=I("lightgrey"), col=I("white")), bins = 4) +
+  theme_bw() +
+  ggtitle("NOObjpref") +
+  xlab("ASV417 (Rarefied Abundance)") +
+  facet_grid(vars(NOObjpref_binned))
+taxa_NOObjpref
+
 ##OFTotDistDay1 - ASV316 (bin=4, Muribaculaceae)
+taxa_OFTotDistDay1 <- ggplot(data=taxa_table_plus_metadata_asv_rare, aes(ASV316, stat(count))) +
+  geom_histogram(aes(fill=I("lightgrey"), col=I("white")), bins = 4) +
+  theme_bw() +
+  ggtitle("OFTotDistDay1") +
+  xlab("ASV316 (Rarefied Abundance)") +
+  facet_grid(vars(OFTotDistDay1_binned))
+taxa_OFTotDistDay1
+
 ##PALatencyDiff - ASV302 (bin=4, Muribaculaceae), ASV506 (bin=3|4, Alistipes)
+taxa_PALatencyDiff_1 <- ggplot(data=taxa_table_plus_metadata_asv_rare, aes(ASV302, stat(count))) +
+  geom_histogram(aes(fill=I("lightgrey"), col=I("white")), bins = 4) +
+  theme_bw() +
+  ggtitle("PALatencyDiff") +
+  xlab("ASV302 (Rarefied Abundance)") +
+  facet_grid(vars(PALatencyDiff_binned))
+taxa_PALatencyDiff_1
+
+taxa_PALatencyDiff_2 <- ggplot(data=taxa_table_plus_metadata_asv_rare, aes(ASV506, stat(count))) +
+  geom_histogram(aes(fill=I("lightgrey"), col=I("white")), bins = 4) +
+  theme_bw() +
+  ggtitle("PALatencyDiff") +
+  xlab("ASV506 (Rarefied Abundance)") +
+  facet_grid(vars(PALatencyDiff_binned))
+taxa_PALatencyDiff_2
+
 ##PALatCross - ASV302 (bin=3|4, Muribaculaceae), ASV437 (a bit weak)
-##HCCD68 - ASV163(bin=5), 
+taxa_PALatCross <- ggplot(data=taxa_table_plus_metadata_asv_rare, aes(ASV302, stat(count))) +
+  geom_histogram(aes(fill=I("lightgrey"), col=I("white")), bins = 4) +
+  theme_bw() +
+  ggtitle("PALatCross") +
+  xlab("ASV302 (Rarefied Abundance)") +
+  facet_grid(vars(PALatCross_binned))
+taxa_PALatCross
+
+##HCCD68 - ASV163(bin=5)
+
+
+covariate <- ggsave(taxa_FSTTimeImmobile, "C:/Users/hammera/Desktop/TomFiles/taxa_FSTTimeImmobile.jpg")
+covariate <- ggsave(taxa_NOObjpref, "C:/Users/hammera/Desktop/TomFiles/taxa_NOObjpref.jpg")
+covariate <- ggsave(taxa_OFTotDistDay1, "C:/Users/hammera/Desktop/TomFiles/taxa_OFTotDistDay1.jpg")
+covariate <- ggsave(taxa_PALatencyDiff_1, "C:/Users/hammera/Desktop/TomFiles/taxa_PALatencyDiff_1.jpg")
+covariate <- ggsave(taxa_PALatencyDiff_2, "C:/Users/hammera/Desktop/TomFiles/taxa_PALatencyDiff_2.jpg")
+covariate <- ggsave(taxa_PALatCross, "C:/Users/hammera/Desktop/TomFiles/taxa_PALatCross_1.jpg")
 
 ```
 
@@ -507,6 +565,14 @@ PALatencyDiff_table
 OFCentDur1_table
 NOObjpref_table
 FSTTimeImmobile_table
+
+covariate <- saveRDS(OFTotDistDay1_table, "C:/Users/hammera/Desktop/TomFiles/OFTotDistDay1_table.rds")
+covariate <- saveRDS(PALatCross_table, "C:/Users/hammera/Desktop/TomFiles/PALatCross_table.rds")
+covariate <- saveRDS(PALatencyDiff_table, "C:/Users/hammera/Desktop/TomFiles/PALatencyDiff_table.rds")
+covariate <- saveRDS(OFCentDur1_table, "C:/Users/hammera/Desktop/TomFiles/OFCentDur1_table.rds")
+covariate <- saveRDS(NOObjpref_table, "C:/Users/hammera/Desktop/TomFiles/NOObjpref_table.rds")
+covariate <- saveRDS(FSTTimeImmobile_table, "C:/Users/hammera/Desktop/TomFiles/FSTTimeImmobile_table.rds")
+
 
 
 ```
