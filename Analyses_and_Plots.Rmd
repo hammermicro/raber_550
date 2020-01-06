@@ -558,13 +558,20 @@ rownames(OFCentDur1_table) <- rownames(OFCentDur1_binned_ASVs)
 rownames(NOObjpref_table) <- rownames(NOObjpref_binned_ASVs)
 rownames(FSTTimeImmobile_table) <- rownames(FSTTimeImmobile_binned_ASVs)
 
-par(mfrow=c(6,1))
-OFTotDistDay1_table
-PALatCross_table
-PALatencyDiff_table
-OFCentDur1_table
-NOObjpref_table
-FSTTimeImmobile_table
+whole_covariate_df <- c(OFTotDistDay1_table,
+PALatCross_table,
+PALatencyDiff_table,
+OFCentDur1_table,
+NOObjpref_table,
+FSTTimeImmobile_table)
+
+write.xlsx(OFTotDistDay1_table, "C:/Users/hammera/Desktop/TomFiles/covariate_ASVs.xlsx", sheetName="sheet1", row.names=TRUE)
+write.xlsx(PALatCross_table, "C:/Users/hammera/Desktop/TomFiles/covariate_ASVs.xlsx", sheetName="sheet2", row.names=TRUE)
+write.xlsx(PALatencyDiff_table, "C:/Users/hammera/Desktop/TomFiles/covariate_ASVs.xlsx", sheetName="sheet3", row.names=TRUE)
+write.xlsx(OFCentDur1_table, "C:/Users/hammera/Desktop/TomFiles/covariate_ASVs.xlsx", sheetName="sheet4", row.names=TRUE)
+write.xlsx(NOObjpref_table, "C:/Users/hammera/Desktop/TomFiles/covariate_ASVs.xlsx", sheetName="sheet5", row.names=TRUE)
+write.xlsx(FSTTimeImmobile_table, "C:/Users/hammera/Desktop/TomFiles/covariate_ASVs.xlsx", sheetName="sheet6", row.names=TRUE)
+
 
 covariate <- saveRDS(OFTotDistDay1_table, "C:/Users/hammera/Desktop/TomFiles/OFTotDistDay1_table.rds")
 covariate <- saveRDS(PALatCross_table, "C:/Users/hammera/Desktop/TomFiles/PALatCross_table.rds")
