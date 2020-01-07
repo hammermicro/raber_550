@@ -601,7 +601,7 @@ treatment_sex_ordination <- ggplot(scrs, aes(x = NMDS1, y = NMDS2, color=Treatme
   geom_segment(data = segs,
   mapping = aes(xend = oNMDS1, yend = oNMDS2)) +
   geom_point(data = cent, size = 5) +
-  geom_point() +                                              
+  geom_point() +
   coord_fixed() 
 
 multi_figure_4 <- grid.arrange(FST_by_Shannon_plot, treatment_sex_ordination, taxa_hist_treatment, taxa_PALatCross)
