@@ -51,8 +51,6 @@ physeq2 <- rarefy_even_depth(physeq1)
 ```
 
 ```{r alphadiv, echo=FALSE}
-## While the p-value for ANOVA of alphadiv~Treatment isn't extremely low (Pr(>F)~0.13), Shannon~Treatment*Sex (Pr(>F)~0.06), Observed~Treatment (Pr(>F)~0.06) it might be useful to briefly mention this in light of Keaton's previous analysis which showed an increase in alphadiv associated with increased radiation exposure. However, this test also functions with the assumptions necessary for running ANOVA about which I am not certain.
-## Should maybe look at mean #ofgenera observed as a function of radiation level. Considering the low count #s post-glom with phyloseq, is this going to be descriptive or meaningful
 ##Covariates = Sex+Treatment+FSTTimeImmobile+NOObjpref+OFCentDur1+FCCuedFrzTone+OFTotDistDay1
 library("phyloseq")
 sample_data(physeq1)$Alphadiv <- estimate_richness(physeq1, split=TRUE, measures=c("Shannon"))
@@ -76,19 +74,20 @@ physeq_enfit <- envfit(physeq_ordination~Treatment*Sex+FSTTimeImmobile+NOObjpref
 
 ```{r bray_by_Sex_Treatment, echo=FALSE}
 library("phyloseq")
-physeq1.ord <- ordinate(physeq1, "NMDS", "bray", trymax=500, k=3)
+set.seed(123)
+physeq1.ord <- ordinate(physeq2, "NMDS", "bray", trymax=500, k=3)
 physeq1.ord.plot <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Sex")
-#plot(physeq1.ord.plot)
-physeq1_ord_treatment <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Treatment", shape="Sex", title="") + stat_ellipse(mapping = aes(linetype=Sex))
-#plot(physeq1_ord_treatment)
-physeq1.ord.plot.treatment <- plot_ordination(physeq1, physeq1.ord, type="samples", color="Sex_Treatment", title="BySex_Treatment")
-#plot(physeq1.ord.plot.treatment)
+plot(physeq1.ord.plot)
+physeq1_ord_treatment <- plot_ordination(physeq2, physeq1.ord, type="samples", color="Treatment", shape="Sex", title="") + stat_ellipse(mapping = aes(linetype=Sex))
+plot(physeq1_ord_treatment)
+physeq1.ord.plot.treatment <- plot_ordination(physeq2, physeq1.ord, type="samples", color="Sex_Treatment", title="BySex_Treatment")
+plot(physeq1.ord.plot.treatment)
 ```
 
 ```{r nmds_different_axes, echo=FALSE}
 library(ggplot2)
-set.seed(1)
-physeq_nmds = metaMDS(otu_table(physeq2), distance="jaccard", k=3, trymax=500, data=treatment.env, verbose=FALSE)
+set.seed(123)
+physeq_nmds = metaMDS(otu_table(physeq2), distance="bray", k=3, trymax=500, data=treatment.env, verbose=FALSE)
 nmds_table = scores(physeq_nmds, display="sites")
 ##plot(nmds_table[,1], nmds_table[,3], main="Bray-Curtis Beta-div", xlab="NMDS1", ylab="NMDS3", pch=20, col=c("slateblue3", "tomato3", "darkolivegreen", "coral4"))
 ##This shows the ordination using different NMDS axes. These can be specified by performing metaMDS on the object otu_table and specifying k=(num of NMDS axes), then using the plot_ordination function with the phyloseq object, specifying colors and shapes based on metadata you want to visualize
@@ -101,18 +100,18 @@ physeq1.ord.plot <- plot_ordination(physeq2, physeq_nmds, type="samples", axes=c
 library("phyloseq")
 library("vegan")
 set.seed(1)
-physeq1.dist <- vegdist(otu_table(physeq2), method="bray")
+physeq2.dist <- vegdist(otu_table(physeq2), method="bray")
 sampledf <- data.frame(sample_data(physeq2))
 set.seed(1)
-perm.results.treatment <- adonis(physeq1.dist ~ Treatment:Sex, data=sampledf, permutations=5000)
+perm.results.treatment <- adonis(physeq2.dist ~ Treatment:Sex, data=sampledf, permutations=5000)
 print(perm.results.treatment)
 physeq1 <- physeq
 ```
 
 ```{r capscale_ordistep, echo=FALSE}
 ## We ran through possible permutations and options for model selection using AIC in ordistep after building a model in capscale. Results are available via mod. The best model found after running through covariate permutations was Treatment*Sex.
-sampledf <- data.frame(sample_data(physeq))
-physeq1.capsca <- capscale(physeq1.dist ~ Treatment*Sex, sampledf, dist="bray")
+sampledf <- data.frame(sample_data(physeq2))
+physeq1.capsca <- capscale(physeq2.dist ~ Treatment*Sex, sampledf, dist="bray")
 set.seed(1)
 mod <- ordistep(physeq1.capsca, perm.max = 5000, trace = T, direction = "both")
 print(mod)
@@ -121,7 +120,7 @@ print(mod)
 ```{r betadispersion, echo=FALSE}
 ## The graphical results of this suggest that there might be a difference in mean betadispersion, with particularly low dispersion among the highly radiated groups. Is lower betadispersion associated with higher radiation levels? Would that suggest that there are more relatively limited conformations adopted by the murine gut microbiome in association with radiation?
 ## Do I need to correct for multiple pairwise comparisons?
-betadispersion <- betadisper(physeq1.dist, sample_data(physeq1)$Treatment, type=c("centroid"))
+betadispersion <- betadisper(physeq2.dist, sample_data(physeq2)$Sex, type=c("centroid"))
 boxplot(betadispersion)
 set.seed(1)
 testbetad <- permutest(betadispersion, pairwise=TRUE, permutations=5000)
@@ -584,7 +583,35 @@ covariate <- saveRDS(FSTTimeImmobile_table, "C:/Users/hammera/Desktop/TomFiles/F
 
 ```
 
+``` {r ordispider_business}
 
+set.seed(123)
+physeq_nmds = metaMDS(otu_table(physeq2), distance="bray", k=3, trymax=500, data=treatment.env, verbose=FALSE)
+nmds_table = scores(physeq_nmds, display="sites")
+
+scrs <- scores(nmds_table, display='sites')
+scrs <- data.frame(scrs)
+scrs$Treatment <- (sample_data(physeq2)$Treatment)
+scrs$Sex = sample_data(physeq2)$Sex
+cent <- aggregate(cbind(NMDS1, NMDS2) ~ Treatment:Sex, data=scrs, FUN=mean)
+
+segs <- merge(scrs, setNames(cent, c('Treatment', 'Sex', 'oNMDS1', 'oNMDS2')), by = c('Treatment','Sex'), sort = FALSE)
+
+treatment_sex_ordination <- ggplot(scrs, aes(x = NMDS1, y = NMDS2, color=Treatment, shape=Sex)) +
+  geom_segment(data = segs,
+  mapping = aes(xend = oNMDS1, yend = oNMDS2)) +
+  geom_point(data = cent, size = 5) +
+  geom_point() +                                              
+  coord_fixed() 
+
+multi_figure_4 <- grid.arrange(FST_by_Shannon_plot, treatment_sex_ordination, taxa_hist_treatment, taxa_PALatCross)
+
+gg_ordiplot(physeq1.ord, groups = (sample_data(physeq2)$Sex), scaling=1, spiders = TRUE, ellipse=FALSE, pt.size=1)
+
+sex_ordination <- gg_ordiplot(physeq1.ord, groups = (sample_data(physeq2)$Treatment), scaling=1, , spiders = TRUE, ellipse=FALSE, pt.size=1)
+
+
+```
 
 
 
