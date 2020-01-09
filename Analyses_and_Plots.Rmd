@@ -53,6 +53,7 @@ physeq2 <- rarefy_even_depth(physeq1)
 ```{r alphadiv, echo=FALSE}
 ##Covariates = Sex+Treatment+FSTTimeImmobile+NOObjpref+OFCentDur1+FCCuedFrzTone+OFTotDistDay1
 library("phyloseq")
+library("ggplot2")
 sample_data(physeq1)$Alphadiv <- estimate_richness(physeq1, split=TRUE, measures=c("Shannon"))
 corr_df <- data.frame(sample_data(physeq1))
 testing_cor_adiv <- cor.test(x=corr_df$PALatCross, y=(as.matrix(corr_df$Alphadiv)), method=c("kendall"))
@@ -438,11 +439,12 @@ print(PALatCross_binned_genus)
 
 ```{r merging_study_objects}
 ##You need to remove the tree from physeq_s1 because it messes up the merging of physeq objects
+library(phyloseq)
+library(vegan)
 set.seed(1)
 physeq_s1 <- readRDS("C:/Users/hammera/Desktop/raber_550/data/three-beam_physeq.rds")
 sample_data(physeq_s1)$Study <- "Three-beam"
 sample_data(physeq_s1)$Treatment <- sample_data(physeq_s1)$Radiation.Conc.cGy
-##factor(sample_data(physeq_s1_genus)$Radiation.Conc.cGy)
 sample_data(physeq)$Study <- "Six-beam"
 sample_data(physeq)$Treatment <- cont_treatment
 oldstudytax <- tax_table(physeq_s1)
@@ -586,6 +588,12 @@ covariate <- saveRDS(FSTTimeImmobile_table, "C:/Users/hammera/Desktop/TomFiles/F
 ```
 
 ``` {r ordispider_business}
+##Creating the ordispider plot
+library(ggplot2)
+library(ggordiplots)
+library(vegan)
+library(gridExtra)
+library(phyloseq)
 
 set.seed(123)
 physeq_nmds = metaMDS(otu_table(physeq2), distance="bray", k=3, trymax=500, data=treatment.env, verbose=FALSE)
@@ -606,6 +614,8 @@ treatment_sex_ordination <- ggplot(scrs, aes(x = NMDS1, y = NMDS2, color=Treatme
   geom_point() +
   coord_fixed() 
 
+
+##This is a different, and unrecommended way to go about creating the ordination above
 multi_figure_4 <- grid.arrange(FST_by_Shannon_plot, treatment_sex_ordination, taxa_hist_treatment, taxa_PALatCross)
 
 gg_ordiplot(physeq1.ord, groups = (sample_data(physeq2)$Sex), scaling=1, spiders = TRUE, ellipse=FALSE, pt.size=1)
