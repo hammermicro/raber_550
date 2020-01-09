@@ -625,12 +625,22 @@ sex_ordination <- gg_ordiplot(physeq1.ord, groups = (sample_data(physeq2)$Treatm
 ```
 
 ```{r code_for_Tom}
-##FSTTimeImmobile by Shannon
+library("readxl")
+library("phyloseq")
+library("ggplot2")
+library("dplyr")
+library("vegan")
+library("DESeq2")
+library("knitr")
+library("OneR")
+library("gridExtra")
+library("ggordiplots")
+##FSTTimeImmobile by Shannon - use the physeq2 object
 sample_data(physeq2)$Alphadiv <- estimate_richness(physeq2, split=TRUE, measures=c("Shannon"))
 corr_df <- data.frame(sample_data(physeq2))
 FST_by_Shannon_plot <-ggplot(corr_df, aes(x=FSTTimeImmobile, y=as.matrix(Alphadiv)), ylab="Shannon") + geom_smooth(method="lm", ylab="Shannon") + geom_point(aes(color=FSTTimeImmobile)) + ylab("Shannon") + xlab("Forced Swim Test (% Time Immobile)") + theme(legend.position = "none") 
 
-##Creating the ordispider plot
+##Creating the ordispider plot - use physeq2 object
 set.seed(123)
 physeq_nmds = metaMDS(otu_table(physeq2), distance="bray", k=3, trymax=500, data=treatment.env, verbose=FALSE)
 nmds_table = scores(physeq_nmds, display="sites")
@@ -647,7 +657,7 @@ treatment_sex_ordination <- ggplot(scrs, aes(x = NMDS1, y = NMDS2, color=Treatme
   geom_point() +
   coord_fixed() 
 
-##Making the taxa histogram plot
+##Making the taxa histogram plot - use the taxa_table_plus_metadata_asv_rare object
 taxa_PALatCross <- ggplot(data=taxa_table_plus_metadata_asv_rare, aes(ASV302, stat(count))) +
   geom_histogram(aes(fill=I("lightgrey"), col=I("white")), bins = 4) +
   theme_bw() +
