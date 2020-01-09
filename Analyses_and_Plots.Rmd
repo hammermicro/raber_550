@@ -625,10 +625,11 @@ sex_ordination <- gg_ordiplot(physeq1.ord, groups = (sample_data(physeq2)$Treatm
 
 ```
 
+```{r code_for_Tom}
 
 
 
-
+```
 
 
 
