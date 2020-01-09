@@ -476,6 +476,8 @@ multi_figure <- grid.arrange(FST_by_Shannon_plot, physeq1_ord_treatment, taxa_hi
 ```
 
 ```{r taxa_list}
+library(ggplot2)
+library(phyloseq)
 
 ##FSTTimeImmobile - ASV315 (bin=4, Muribaculaceae)
 taxa_FSTTimeImmobile <- ggplot(data=taxa_table_plus_metadata_asv_rare, aes(ASV315, stat(count))) +
