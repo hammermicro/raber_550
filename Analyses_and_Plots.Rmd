@@ -43,7 +43,6 @@ sample_data(physeq)$FCCuedFrzTone_binned <- bin(sample_data(physeq)$FCCuedFrzTon
 sample_data(physeq)$OFTotDistDay1_binned <- bin(sample_data(physeq)$OFTotDistDay1, nbins=4, labels=c("first", "second", "third", "fourth"), method="content")
 sample_data(physeq)$PALatencyDiff_binned <- bin(sample_data(physeq)$PALatencyDiff, nbins=4, labels=c("first", "second", "third", "fourth"), method="content")
 sample_data(physeq)$PALatCross_binned <- bin(sample_data(physeq)$PALatCross, nbins=4, labels=c("first", "second", "third", "fourth"), method="content")
-cont_treatment <- sample_data(physeq)$Treatment
 sample_data(physeq)$Treatment <- factor(sample_data(physeq)$Treatment)
 ##Setting a couple of variables equal to physeq. Vars will be modified and updated later on
 physeq1 <- physeq
@@ -216,7 +215,7 @@ physeq_genus <- tax_glom(physeq, taxrank="Genus")
 
 ```{r ASV_by_OFTotDistDay1, echo=FALSE}
 ## DESeq2 analysis using the specified covariate (ASV level)
-treatdds = phyloseq_to_deseq2(physeq1, ~OFTotDistDay1)
+treatdds = phyloseq_to_deseq2(physeq1, ~OFTotDistDay1*Treatment)
 ## Generated table containing ASVs
 OFTotDistDay1_ASVs <- taxa_with_deseq(treatdds, physeq1)
 print(OFTotDistDay1_ASVs)
@@ -229,7 +228,7 @@ print(OFTotDistDay1_genus)
 
 ```{r ASV_by_FSTTimeImmobile, echo=FALSE}
 ## DESeq2 analysis using the specified covariate (ASV level)
-treatdds = phyloseq_to_deseq2(physeq1, ~FSTTimeImmobile)
+treatdds = phyloseq_to_deseq2(physeq1, ~FSTTimeImmobile*Treatment)
 ## Generated table containing ASVs
 FSTTimeImmobile_ASVs <- taxa_with_deseq(treatdds, physeq1)
 print(FSTTimeImmobile_ASVs)
@@ -242,7 +241,7 @@ print(FSTTimeImmobile_genus)
 
 ```{r ASV_by_NOObjpref, echo=FALSE}
 ## Convert to deseq2 object using the specified covariate
-treatdds = phyloseq_to_deseq2(physeq1, ~NOObjpref)
+treatdds = phyloseq_to_deseq2(physeq1, ~NOObjpref*Treatment)
 ## Generated table containing ASVs
 NOObjpref_ASVs <- taxa_with_deseq(treatdds, physeq1)
 print(NOObjpref_ASVs)
@@ -256,7 +255,7 @@ print(NOObjpref_genus)
 
 ```{r ASV_by_OFCentDur1, echo=FALSE}
 ## Convert to deseq2 object using the specified covariate
-treatdds = phyloseq_to_deseq2(physeq1, ~OFCentDur1)
+treatdds = phyloseq_to_deseq2(physeq1, ~OFCentDur1*Treatment)
 ## Generated table containing ASVs
 OFCentDur1_ASVs <- taxa_with_deseq(treatdds, physeq1)
 print(OFCentDur1_ASVs)
@@ -310,9 +309,9 @@ print(Sex_genus)
 
 ```{r ASV_by_Treatment_interaction_Sex, echo=FALSE}
 ## Convert to deseq2 object using the specified covariate
-treatdds = phyloseq_to_deseq2(physeq1, ~Sex*Treatment)
+treatdds = phyloseq_to_deseq2(physeq, ~Treatment*Sex)
 ## Generated table containing ASVs
-Treatment_Sex_ASVs <- taxa_with_deseq(treatdds, physeq1)
+Treatment_Sex_ASVs <- taxa_with_deseq(treatdds, physeq)
 print(Treatment_Sex_ASVs)
 ## DESeq2 analysis using Treatment*Sex
 treatdds = phyloseq_to_deseq2(physeq_genus, ~Sex*Treatment)
@@ -339,7 +338,7 @@ print(Treatment_Sex_genus)
 
 ```{r ASV_by_FSTTimeImmobile_binned, echo=FALSE}
 ## Convert to deseq2 object using the specified covariate
-treatdds = phyloseq_to_deseq2(physeq1, ~FSTTimeImmobile_binned)
+treatdds = phyloseq_to_deseq2(physeq1, ~FSTTimeImmobile_binned*Treatment)
 ## Generated table containing ASVs
 FSTTimeImmobile_binned_ASVs <- taxa_with_deseq(treatdds, physeq1)
 print(FSTTimeImmobile_binned_ASVs)
@@ -356,12 +355,12 @@ print(FSTTimeImmobile_binned_genus)
 
 ```{r ASV_by_NOObjpref_binned, echo=FALSE}
 ## Convert to deseq2 object using the specified covariate
-treatdds = phyloseq_to_deseq2(physeq1, ~NOObjpref_binned)
+treatdds = phyloseq_to_deseq2(physeq1, ~NOObjpref_binned*Treatment)
 ## Generated table containing ASVs
 NOObjpref_binned_ASVs <- taxa_with_deseq(treatdds, physeq1)
 print(NOObjpref_binned_ASVs)
 ## DESeq2 analysis using FSTTimeImmobile_binned
-treatdds = phyloseq_to_deseq2(physeq_genus, ~NOObjpref_binned)
+treatdds = phyloseq_to_deseq2(physeq_genus, ~NOObjpref_binned*Treatment)
 ## Genus level table
 NOObjpref_binned_genus <- taxa_with_deseq(treatdds, physeq_genus)
 
@@ -371,7 +370,7 @@ print(NOObjpref_binned_genus)
 
 ```{r ASV_by_OFCentDur1_binned, echo=FALSE}
 ## Convert to deseq2 object using the specified covariate
-treatdds = phyloseq_to_deseq2(physeq1, ~OFCentDur1_binned)
+treatdds = phyloseq_to_deseq2(physeq1, ~OFCentDur1_binned*Treatment)
 ## Generated table containing ASVs
 OFCentDur1_binned_ASVs <- taxa_with_deseq(treatdds, physeq1)
 print(OFCentDur1_binned_ASVs)
@@ -386,12 +385,12 @@ print(OFCentDur1_binned_genus)
 
 ```{r ASV_by_OFTotDistDay1_binned, echo=FALSE}
 ## Convert to deseq2 object using the specified covariate
-treatdds = phyloseq_to_deseq2(physeq1, ~OFTotDistDay1_binned)
+treatdds = phyloseq_to_deseq2(physeq1, ~OFTotDistDay1_binned*Treatment)
 ## Generated table containing ASVs
 OFTotDistDay1_binned_ASVs <- taxa_with_deseq(treatdds, physeq1)
 print(OFTotDistDay1_binned_ASVs)
 ## DESeq2 analysis using FSTTimeImmobile_binned
-treatdds = phyloseq_to_deseq2(physeq_genus, ~OFTotDistDay1_binned)
+treatdds = phyloseq_to_deseq2(physeq_genus, ~OFTotDistDay1_binned*Treatment)
 ## Genus level table
 OFTotDistDay1_binned_genus <- taxa_with_deseq(treatdds, physeq_genus)
 
@@ -403,7 +402,7 @@ print(OFTotDistDay1_binned_genus)
 
 ```{r ASV_by_PALatencyDiff_binned, echo=FALSE}
 ## Convert to deseq2 object using the specified covariate
-treatdds = phyloseq_to_deseq2(physeq1, ~PALatencyDiff_binned)
+treatdds = phyloseq_to_deseq2(physeq1, ~PALatencyDiff*Treatment)
 ## Generated table containing ASVs
 PALatencyDiff_binned_ASVs <- taxa_with_deseq(treatdds, physeq1)
 print(PALatencyDiff_binned_ASVs)
@@ -419,7 +418,7 @@ print(PALatencyDiff_binned_genus)
 
 ```{r ASV_by_PALatCross_binned, echo=FALSE}
 ## Convert to deseq2 object using the specified covariate
-treatdds = phyloseq_to_deseq2(physeq1, ~PALatCross_binned)
+treatdds = phyloseq_to_deseq2(physeq1, ~PALatCross*Treatment)
 ## Generated table containing ASVs
 PALatCross_binned_ASVs <- taxa_with_deseq(treatdds, physeq1)
 print(PALatCross_binned_ASVs)
