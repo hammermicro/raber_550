@@ -402,7 +402,7 @@ print(OFTotDistDay1_binned_genus)
 
 ```{r ASV_by_PALatencyDiff_binned, echo=FALSE}
 ## Convert to deseq2 object using the specified covariate
-treatdds = phyloseq_to_deseq2(physeq1, ~PALatencyDiff*Treatment)
+treatdds = phyloseq_to_deseq2(physeq1, ~PALatencyDiff_binned*Treatment)
 ## Generated table containing ASVs
 PALatencyDiff_binned_ASVs <- taxa_with_deseq(treatdds, physeq1)
 print(PALatencyDiff_binned_ASVs)
@@ -423,7 +423,7 @@ treatdds = phyloseq_to_deseq2(physeq1, ~PALatCross*Treatment)
 PALatCross_binned_ASVs <- taxa_with_deseq(treatdds, physeq1)
 print(PALatCross_binned_ASVs)
 ## DESeq2 analysis using FSTTimeImmobile_binned
-treatdds = phyloseq_to_deseq2(physeq_genus, ~PALatCross_binned)
+treatdds = phyloseq_to_deseq2(physeq_genus, ~PALatCross_binned*Treatment)
 ## Genus level table
 PALatCross_binned_genus <- taxa_with_deseq(treatdds, physeq_genus)
 
